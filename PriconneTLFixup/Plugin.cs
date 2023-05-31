@@ -5,7 +5,7 @@ using HarmonyLib;
 
 namespace PriconneTLFixup;
 
-[BepInPlugin("PriconneTLFixup", "PriconneTLFixup by Dakari", "1.0.0")]
+[BepInPlugin("PriconneTLFixup", "PriconneTLFixup by Dakari", "1.1.0")]
 [BepInProcess("PrincessConnectReDive.exe")]
 public class Plugin: BasePlugin
 {
