@@ -11,6 +11,11 @@ namespace PriconneTLFixup.Patches;
 [HarmonyPatch(typeof(UILabel), "text", MethodType.Setter)]
 public class ThousandsSeperatorPatch
 {
+    private static Regex _hpRegex = new(@"^(\d+)/(\d{4,})$", RegexOptions.Compiled);
+
+    private static Regex _gradientTextRegex =
+        new(@"^(\[[0-9a-fA-F,-]+\])(\d{4,})(\[[0-9a-fA-F,-]+\])$", RegexOptions.Compiled);
+
     private static CultureInfo _culture = new("en-US");
     
     public static void Prefix(ref string value)
@@ -19,7 +24,34 @@ public class ThousandsSeperatorPatch
         {
             return;
         }
-        
+
+        var match = _hpRegex.Match(value);
+        if (match.Success)
+        {
+            foreach (Group group in match.Groups)
+            {
+                if (!int.TryParse(group.Value, out var hp))
+                {
+                    continue;
+                }
+
+                value = value.Replace(group.Value, hp.ToString("#,0", _culture));
+            }
+
+            return;
+        }
+
+        var gradientMatch = _gradientTextRegex.Match(value);
+        if (gradientMatch.Success)
+        {
+            var group = gradientMatch.Groups[2];
+            if (int.TryParse(group.Value, out var hp))
+            {
+                value = value.Replace(group.Value, hp.ToString("#,0", _culture));
+            }
+            return;
+        }
+
         var x = value.StartsWith("x");
         if (x)
         {
@@ -48,42 +80,5 @@ public class ThousandsSeperatorPatch
             formattedNumber = "×" + formattedNumber;
         }
         value = formattedNumber;
-    }
-}
-
-/**
- * This patch adds thousands seperators to numbers that are contained in translated strings.
- * It's important to do this after translation, since otherwise regex matches for translations will fail.
- */
-[HarmonyPatch(typeof(AutoTranslationPlugin), "SetText")]
-public class ThousandsSeperatorPostTranslationPatch
-{
-    private static Regex _numberRegex = new(@"\d{4,}", RegexOptions.Compiled);
-    private static Regex _dateRegex = new(@"\d{2,4}[/\.\-]\d{2}[/\.\-]\d{2,4}", RegexOptions.Compiled);
-    private static CultureInfo _culture = new("en-US");
-    
-    public static void Prefix(ref string text)
-    {
-        if (text == null)
-        {
-            return;
-        }
-        
-        if (_dateRegex.IsMatch(text))
-        {
-            return;
-        }
-        
-        var matches = _numberRegex.Matches(text);
-        foreach (Match match in matches)
-        {
-            if (!int.TryParse(match.Value, out var intVal))
-            {
-                continue;
-            }
-            
-            string formattedNumber = intVal.ToString("#,0", _culture);
-            text = text.Replace(match.Value, formattedNumber);
-        }
     }
 }
