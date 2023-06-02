@@ -21,6 +21,9 @@
         <Reference Include="XUnity.Common">
             <HintPath>$(GameDir)\BepInEx\core\XUnity.Common.dll</HintPath>
         </Reference>
+        <Reference Include="SugoiOfflineTranslator">
+            <HintPath>$(GameDir)\BepInEx\plugins\XUnity.AutoTranslator\Translators\SugoiOfflineTranslator.dll</HintPath>
+        </Reference>
         <Reference Include="0Harmony">
             <HintPath>..\libs\0Harmony.dll</HintPath>
         </Reference>
