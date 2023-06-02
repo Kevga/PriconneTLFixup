@@ -38,13 +38,13 @@ public class MonsterDetailOverflowPatch
         
         //TODO: This coroutine unfortunately only runs once. It needs to run the entire time the dialog is open.
         //The issue does not seem to lie in the coroutine itself.
-        __instance.StartCoroutine(UpdateDetailTextPlate(__instance).WrapToIl2Cpp());
+        CoroutineStarter.Instance.StartCoroutine(UpdateDetailTextPlate(__instance).WrapToIl2Cpp());
     }
     
     private static IEnumerator UpdateDetailTextPlate(PartsMonsterDetailTextPlate textPlate)
     {
         var text = "";
-        while (textPlate.detailText.isActiveAndEnabled)
+        while (textPlate.detailText != null)
         {
             if (textPlate.detailText.text != text)
             {
