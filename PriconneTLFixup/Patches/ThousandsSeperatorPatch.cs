@@ -28,6 +28,19 @@ public class ThousandsSeperatorSoloNumberPatch
             return;
         }
 
+        try
+        {
+            var name = __instance.name;
+            if (name != null && (name.ToLower().Contains("input") || name.ToLower().Contains("condition")))
+            {
+                return;
+            }
+        }
+        catch (System.Exception)
+        {
+            // ignored
+        }
+
         var match = _hpRegex.Match(value);
         if (match.Success)
         {
@@ -112,6 +125,11 @@ public class ThousandsSeperatorPostTranslationPatch
     public static void Prefix(ref string text)
     {
         if (text == null)
+        {
+            return;
+        }
+
+        if (text.Contains("Player ID"))
         {
             return;
         }
