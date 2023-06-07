@@ -70,7 +70,7 @@ public static class StoryManagerPatch
     private static bool shouldFeedPage;
     public static void Prefix(StoryManager __instance, int _index)
     {
-        int count = __instance.storyCommandList.Count;
+        var count = __instance.storyCommandList.Count;
         if (_index >= count)
         {
             return;
@@ -85,7 +85,7 @@ public static class StoryManagerPatch
     
     public static void Postfix(StoryManager __instance, int _index)
     {
-        int count = __instance.storyCommandList.Count;
+        var count = __instance.storyCommandList.Count;
         if (_index >= count)
         {
             return;
@@ -120,6 +120,8 @@ public static class StoryManagerPatch
         
         shouldFeedPage = false;
         __instance.FeedPage();
+        __instance.SetTouchEnabled(true);
+        __instance.touchDelegateList.Clear();
     }
     
     internal static bool isPrintNext(CommandStruct[] commands, int index)
@@ -159,7 +161,7 @@ public static class TutorialStoryManagerPatch
     private static bool shouldFeedPage;
     public static void Prefix(TutorialStoryManager __instance, int _commndIndex)
     {
-        int count = __instance.storyCommandList.Count;
+        var count = __instance.storyCommandList.Count;
         if (_commndIndex >= count)
         {
             return;
@@ -174,7 +176,7 @@ public static class TutorialStoryManagerPatch
     
     public static void Postfix(TutorialStoryManager __instance, int _commndIndex)
     {
-        int count = __instance.storyCommandList.Count;
+        var count = __instance.storyCommandList.Count;
         if (_commndIndex >= count)
         {
             //Plugin.Logger.LogDebug("End of story: " + _index);
@@ -210,5 +212,7 @@ public static class TutorialStoryManagerPatch
         
         shouldFeedPage = false;
         __instance.FeedPage();
+        __instance.SetTouchEnabled(true);
+        __instance.touchDelegateList.Clear();
     }
 }
