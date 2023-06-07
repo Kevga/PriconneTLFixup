@@ -4,7 +4,7 @@ using BepInEx.Unity.IL2CPP;
 
 namespace PriconneTLFixup;
 
-[BepInPlugin("PriconneTLFixup", "PriconneTLFixup by Dakari", "1.1.0")]
+[BepInPlugin("PriconneTLFixup", "PriconneTLFixup by Dakari", "1.2.0")]
 [BepInProcess("PrincessConnectReDive.exe")]
 public class Plugin: BasePlugin
 {
