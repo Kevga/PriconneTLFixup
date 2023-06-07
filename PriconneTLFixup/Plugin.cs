@@ -16,6 +16,8 @@ public class Plugin: BasePlugin
         Logger = Log;
         _harmonyController.PatchAll();
         Logger.LogInfo("PriconneTLFixup loaded!");
+        Logger.LogInfo("If you want to contribute to this project, please visit:");
+        Logger.LogInfo("https://github.com/Kevga/PriconneTLFixup");
     }
     
     public override bool Unload()
