@@ -5,7 +5,7 @@ namespace PriconneTLFixup;
 
 public class HarmonyPatchController
 {
-    private List<PatchClassProcessor>? _patchClassProcessorList;
+    private Dictionary<Type, PatchClassProcessor>? _patchClassProcessorList;
     private Harmony _harmonyInstance = null!;
     private const string HarmonyID = "com.github.kevga.priconnetlfixup";
 
@@ -13,16 +13,17 @@ public class HarmonyPatchController
     {
         _harmonyInstance = new Harmony(HarmonyID);
 
-        _patchClassProcessorList = new List<PatchClassProcessor>();
+        _patchClassProcessorList = new Dictionary<Type, PatchClassProcessor>();
         AccessTools.GetTypesFromAssembly(Assembly.GetExecutingAssembly()).Do<Type>(type =>
             {
                 if (type.FullName?.StartsWith("PriconneTLFixup.Patches") ?? false)
                 {
                     try
                     {
-                        _patchClassProcessorList.Add(_harmonyInstance.CreateClassProcessor(type));  
+                        _patchClassProcessorList.Add(type, _harmonyInstance.CreateClassProcessor(type));  
                     } catch (Exception e)
                     {
+                        Plugin.Logger.LogError("Failed to create class processor for " + type.FullName);
                         Plugin.Logger.LogError(e);
                     }
                     
@@ -35,17 +36,24 @@ public class HarmonyPatchController
     {
         InitPatches();
 
-        _patchClassProcessorList?.ForEach(patchClassProcessor =>
+        if (!_patchClassProcessorList?.Any() ?? true)
+        {
+            Plugin.Logger.LogError("No patches found");
+            return;
+        }
+        
+        foreach(var entry in _patchClassProcessorList!)
         {
             try
             {
-                patchClassProcessor.Patch();
+                entry.Value.Patch();
             }
             catch (Exception e)
             {
+                Plugin.Logger.LogError("Failed to install patch " + entry.Key.FullName);
                 Plugin.Logger.LogError(e);
             }
-        });
+        }
     }
 
     internal void UnpatchSelf()
