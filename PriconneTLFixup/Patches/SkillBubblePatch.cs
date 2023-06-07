@@ -20,7 +20,7 @@ public class SkillBubblePatch
 
     private static IEnumerator updateSkillBalloon(LifeGaugeController controller, string _skillName)
     {
-        float timer = 1.5f;
+        var timer = 1.2f;
         while (!_skillName.IsNullOrEmpty())
         {
             var translatedName = controller.skillNameLabel.text;
