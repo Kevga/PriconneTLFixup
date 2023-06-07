@@ -2,7 +2,9 @@
 using System.Globalization;
 using System.Text.RegularExpressions;
 using BepInEx.Unity.IL2CPP.Utils.Collections;
+using Elements;
 using HarmonyLib;
+using Il2CppInterop.Runtime.InteropTypes.Arrays;
 using Il2CppSystem;
 using XUnity.AutoTranslator.Plugin.Core;
 
@@ -12,6 +14,7 @@ namespace PriconneTLFixup.Patches;
  * This patch adds thousands seperators to number strings for easier readability of large numbers.
  */
 [HarmonyPatch(typeof(UILabel), "text", MethodType.Setter)]
+[HarmonyWrapSafe]
 public class ThousandsSeperatorSoloNumberPatch
 {
     private static Regex _hpRegex = new(@"^(\d+)/(\d{4,})$", RegexOptions.Compiled);
@@ -23,7 +26,7 @@ public class ThousandsSeperatorSoloNumberPatch
     
     public static void Prefix(UILabel __instance, ref string value)
     {
-        if (value == null)
+        if (value == null || __instance == null)
         {
             return;
         }
@@ -67,61 +70,31 @@ public class ThousandsSeperatorSoloNumberPatch
             }
             return;
         }
-
-        var x = value.StartsWith("x");
-        if (x)
-        {
-            value = value.Substring(1);
-        }
-        
-        var times = value.StartsWith('×');
-        if (times)
-        {
-            value = value.Substring(1);
-        }
-        
-        var plus = value.StartsWith('+');
-        if (plus)
-        {
-            value = value.Substring(1);
-        }
         
         if (!long.TryParse(value, out var intVal))
         {
             return;
         }
-        
+
         if (__instance.overflowMethod == UILabel.Overflow.ClampContent)
         {
             __instance.overflowMethod = UILabel.Overflow.ShrinkContent;
             Plugin.Logger.LogDebug($"Changed overflow method to shrink content for {__instance.name}");
         }
-        
-        string formattedNumber = intVal.ToString("#,0", _culture);
-        
-        if (x)
-        {
-            formattedNumber = "x" + formattedNumber;
-        }
-        if (times)
-        {
-            formattedNumber = "×" + formattedNumber;
-        }
-        if (plus)
-        {
-            formattedNumber = "+" + formattedNumber;
-        }
+
+        var formattedNumber = intVal.ToString("#,0", _culture);
         value = formattedNumber;
     }
 }
 
 [HarmonyPatch(typeof(AutoTranslationPlugin), "SetText")]
+[HarmonyWrapSafe]
 public class ThousandsSeperatorPostTranslationPatch
 {
-    private static readonly Regex NumberRegex = new(@"\d{4,}", RegexOptions.Compiled);
+    private static readonly Regex NumberRegex = new(@"\d{4,}", RegexOptions.Compiled | RegexOptions.Singleline);
     private static readonly Regex DateRegex = new(@"\d{2,4}[/\.\-]\d{2}[/\.\-]\d{2,4}", RegexOptions.Compiled);
-    private static readonly CultureInfo Culture = new("en-US");
-    
+    internal static readonly CultureInfo Culture = new("en-US");
+
     public static void Prefix(ref string text)
     {
         if (text == null)
@@ -138,11 +111,8 @@ public class ThousandsSeperatorPostTranslationPatch
         {
             return;
         }
-        
-        //Find all matches in string
+
         var matches = NumberRegex.Matches(text);
-        
-        //For each match, check if number is in ConvertedNumberDictionary. If it is, convert it to the formatted string.
         foreach (Match match in matches)
         {
             if (!long.TryParse(match.Value, out var intVal))
@@ -150,16 +120,12 @@ public class ThousandsSeperatorPostTranslationPatch
                 continue;
             }
 
-            if (ThousandsSeperatorDictionary32Patch.ConvertedNumberDictionary.TryGetValue(intVal, out var value1))
+            if (!ThousandsSeperatorDictionary32Patch.ConvertedNumberDictionary.TryGetValue(intVal, out _))
             {
-                text = text.Replace(match.Value, intVal.ToString("#,0", Culture));
-                Plugin.Logger.LogDebug($"Converted {match.Value} to {intVal.ToString("#,0", Culture)}");
-                ThousandsSeperatorDictionary32Patch.ConvertedNumberDictionary.Remove(intVal);
+                continue;
             }
-            else
-            {
-                Plugin.Logger.LogDebug($"Could not find {match.Value} in ConvertedNumberDictionary");
-            }
+
+            text = text.Replace(match.Value, intVal.ToString("#,0", Culture));
         }
     }
 }
@@ -168,8 +134,8 @@ public class ThousandsSeperatorPostTranslationPatch
 [HarmonyWrapSafe]
 public class ThousandsSeperatorDictionary32Patch
 {
-    internal static bool _initialized;
-    internal static Dictionary<long, string> ConvertedNumberDictionary = new();
+    internal static bool Initialized;
+    internal static readonly Dictionary<long, string> ConvertedNumberDictionary = new();
     
     public static void Postfix(ref string __result, int value, Il2CppSystem.ReadOnlySpan<char> format)
     {
@@ -179,22 +145,27 @@ public class ThousandsSeperatorDictionary32Patch
         }
 
         ConvertedNumberDictionary[value] = __result;
-        
-        if (!_initialized)
+
+        if (Initialized)
         {
-            CoroutineStarter.Instance.StartCoroutine(ClearConvertedNumberDictionary().WrapToIl2Cpp());
-            _initialized = true;
+            return;
         }
+
+        CoroutineStarter.Instance.StartCoroutine(ClearConvertedNumberDictionary().WrapToIl2Cpp());
+        Initialized = true;
     }
-    
+
     private static IEnumerator ClearConvertedNumberDictionary()
     {
-        Plugin.Logger.LogDebug("Initialized ConvertedNumberDictionary");
+        //This is intended to run the entire duration of the game
+        //We want to clear the dictionaries every frame to only keep values that were converted in the current frame
         while (true)
         {
             ConvertedNumberDictionary.Clear();
+            ThousandsSeperatorDictionaryCustomUILabelPatch.NumberDictionary.Clear();
             yield return null;
         }
+        // ReSharper disable once IteratorNeverReturns
     }
 }
 
@@ -213,12 +184,51 @@ public class ThousandsSeperatorDictionary64Patch
     }
 }
 
-[HarmonyPatch(typeof(Il2CppSystem.Object), nameof(Il2CppSystem.Object.ToString))]
+[HarmonyPatch(typeof(CustomUILabel), nameof(CustomUILabel.SetText), typeof(string), typeof(Il2CppReferenceArray<Il2CppSystem.Object>))]
 [HarmonyWrapSafe]
-public class ThousandsSeperatorDictionaryObjectPatch
+public class ThousandsSeperatorDictionaryCustomUILabelPatch
 {
-    public static void Postfix(object __instance, string __result)
+    internal static readonly Dictionary<CustomUILabel, long> NumberDictionary = new();
+    public static void Prefix(CustomUILabel __instance, Il2CppReferenceArray<Il2CppSystem.Object> _args)
     {
-        Plugin.Logger.LogDebug($"Object: {__instance.GetType()}: {__result}");
+        if (_args.Length == 0)
+        {
+            return;
+        }
+        
+        foreach (var arg in _args)
+        {
+            if (arg == null)
+            {
+                continue;
+            }
+            var cpptype = arg.GetIl2CppType();
+            var actualType = System.Type.GetType(cpptype.AssemblyQualifiedName);
+            if (actualType == typeof(int))
+            {
+                var value = arg.Unbox<int>();
+                NumberDictionary.TryAdd(__instance, value);
+            } 
+            else if (actualType == typeof(long))
+            {
+                var value = arg.Unbox<long>();
+                NumberDictionary.TryAdd(__instance, value);
+            }
+        }
+    }
+
+    public static void Postfix(CustomUILabel __instance, Il2CppReferenceArray<Il2CppSystem.Object> _args)
+    {
+        var exists = NumberDictionary.TryGetValue(__instance, out var value);
+        if (!exists)
+        {
+            return;
+        }
+        var formattedNumberString = value.ToString("#,0", ThousandsSeperatorPostTranslationPatch.Culture);
+        if (formattedNumberString == value.ToString())
+        {
+            return;
+        }
+        __instance.text = __instance.text.Replace(value.ToString(), formattedNumberString);
     }
 }
