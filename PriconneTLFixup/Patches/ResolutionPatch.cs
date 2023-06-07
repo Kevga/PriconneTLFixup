@@ -1,5 +1,4 @@
-﻿using Cute;
-using HarmonyLib;
+﻿using HarmonyLib;
 using UnityEngine;
 
 namespace PriconneTLFixup.Patches;
@@ -14,15 +13,15 @@ public class ResolutionPatch
     {
         var resolution = Screen.currentResolution;
         var aspectRatio = 1.7777778f;
-        float num = _width / (float)_height;
+        var num = _width / (float)_height;
         if (num < aspectRatio)
         {
-            _height = Mathf.Clamp(_height, (int)((float)resolution.height / 10), (int)resolution.height);
+            _height = Mathf.Clamp(_height, (int)((float)resolution.height / 10), resolution.height);
             _width = Mathf.RoundToInt(_height * aspectRatio);
         }
         else if (num > aspectRatio)
         {
-            _width = Mathf.Clamp(_width, (int)((float)resolution.width / 10), (int)resolution.width);
+            _width = Mathf.Clamp(_width, (int)((float)resolution.width / 10), resolution.width);
             _height = Mathf.RoundToInt(_width / aspectRatio);
         }
 

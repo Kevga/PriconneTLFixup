@@ -7,9 +7,9 @@ public static class Util
 {
     public static string GetPath( this object obj )
     {
-        StringBuilder path = new StringBuilder();
+        var path = new StringBuilder();
         var segments = GetPathSegments( obj );
-        for( int i = 0; i < segments.Length; i++ )
+        for( var i = 0; i < segments.Length; i++ )
         {
             path.Append( "/" ).Append( segments[ i ] );
         }
@@ -19,7 +19,7 @@ public static class Util
     
     public static string[] GetPathSegments( this object obj )
     {
-        GameObject[] objects = new GameObject[ 128 ];
+        var objects = new GameObject[ 128 ];
     
         var go = GetAssociatedGameObject( obj );
         if (go == null)
@@ -27,8 +27,8 @@ public static class Util
             return Array.Empty<string>();
         }
 
-        int i = 0;
-        int j = 0;
+        var i = 0;
+        var j = 0;
 
         objects[ i++ ] = go;
         while( go.transform.parent != null )

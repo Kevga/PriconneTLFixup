@@ -6,6 +6,13 @@ using HarmonyLib;
 
 namespace PriconneTLFixup.Patches;
 
+/**
+ * This set of patches does the following:
+ * - Combines the list of strings that were previously displayed separately in their own respective UILabel into one
+ * - Enables wrapping of this one label
+ * - Adds line breaks before each bullet point
+ */
+
 [HarmonyPatch(typeof(PartsDialogMonsterDetail), nameof(PartsDialogMonsterDetail.stringToLineStringList))]
 [HarmonyWrapSafe]
 public class MonsterDetailPatch
@@ -35,9 +42,6 @@ public class MonsterDetailOverflowPatch
     public static void Postfix(PartsMonsterDetailTextPlate __instance)
     {
         __instance.detailText.overflowMethod = UILabel.Overflow.ResizeHeight;
-        
-        //TODO: This coroutine unfortunately only runs once. It needs to run the entire time the dialog is open.
-        //The issue does not seem to lie in the coroutine itself.
         CoroutineStarter.Instance.StartCoroutine(UpdateDetailTextPlate(__instance).WrapToIl2Cpp());
     }
     
@@ -50,6 +54,7 @@ public class MonsterDetailOverflowPatch
             {
                 var updatedText = textPlate.detailText.text;
                 updatedText = updatedText.Replace("・", "\n・");
+                updatedText = updatedText.Replace("\n\n・", "\n・");
                 textPlate.detailText.text = updatedText;
                 text = updatedText;
             }
