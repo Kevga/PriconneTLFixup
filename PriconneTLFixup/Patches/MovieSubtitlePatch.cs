@@ -46,7 +46,7 @@ public class MovieLoadSubtitlePatch
             return;
         }
         
-        Plugin.Logger.LogInfo("Showing subtitles for movie type: " + _movieType);
+        Log.Debug("Showing subtitles for movie type: " + _movieType);
         _isShowSubtitle = true;
     }
 }
@@ -60,7 +60,7 @@ public class SubtitlePretranslationPatch
     {
         if (__instance.data == null || __instance.data.Count == 0)
         {
-            Plugin.Logger.LogWarning("SubtitleManager.Initialize: data is null or empty");
+            Log.Warn("SubtitleManager.Initialize: data is null or empty");
             return;
         }
         if (PretranslationLabel == null)
@@ -68,7 +68,7 @@ public class SubtitlePretranslationPatch
             var pretranslationGameObject = new GameObject();
             pretranslationGameObject.transform.localPosition = new Vector3(0, -1000, 0);
             PretranslationLabel = pretranslationGameObject.AddComponent<CustomUILabel>();
-            Plugin.Logger.LogInfo("Created pre-translation label");
+            Log.Info("Created pre-translation label");
         }
         
         CoroutineStarter.Instance.StartCoroutine(PretranslationCoroutine(__instance).WrapToIl2Cpp());
@@ -77,7 +77,7 @@ public class SubtitlePretranslationPatch
     private static IEnumerator PretranslationCoroutine(SubtitleManager manager)
     {
         const int stallTime = 3100;
-        Plugin.Logger.LogDebug("Starting pretranslation of subtitles");
+        Log.Debug("Starting pretranslation of subtitles");
         yield return null;
 
         var recordList = manager.data.recordList.ToArray();
@@ -111,7 +111,7 @@ public class SubtitlePretranslationPatch
             yield return new WaitForSecondsRealtime(2f); 
         }
         
-        Plugin.Logger.LogDebug("Pretranslation finished");
+        Log.Debug("Pretranslation finished");
         if (PretranslationLabel != null)
         {
             PretranslationLabel.SetText("");

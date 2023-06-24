@@ -81,14 +81,14 @@ public class SpineDramaControllerBalloonPatch
             else
             {
                 correctedDelay += 5;
-                Plugin.Logger.LogWarning("charsPerSecond was 0, using default delay of 5 seconds");
+                Log.Warn("charsPerSecond was 0, using default delay of 5 seconds");
             }
             
-            Plugin.Logger.LogDebug($"Corrected delay: {correctedDelay} from {fadeoutDelayOffset} + {text.Length} / {charsPerSecond}");
+            Log.Debug($"Corrected delay: {correctedDelay} from {fadeoutDelayOffset} + {text.Length} / {charsPerSecond}");
         }
         else
         {
-            Plugin.Logger.LogDebug($"Not correcting delay, text length: {text.Length}, tapSkip: {tapSkip}");
+            Log.Debug($"Not correcting delay, text length: {text.Length}, tapSkip: {tapSkip}, tapWait: {tapWait}");
         }
         
         //Check if the label text setter was intercepted by XUAT

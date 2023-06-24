@@ -79,7 +79,7 @@ public class ThousandsSeperatorSoloNumberPatch
         if (__instance.overflowMethod == UILabel.Overflow.ClampContent)
         {
             __instance.overflowMethod = UILabel.Overflow.ShrinkContent;
-            Plugin.Logger.LogDebug($"Changed overflow method to shrink content for {__instance.name}");
+            Log.Debug($"Changed overflow method to shrink content for {__instance.name}");
         }
 
         var formattedNumber = intVal.ToString("#,0", _culture);

@@ -179,7 +179,7 @@ public static class TutorialStoryManagerPatch
         var count = __instance.storyCommandList.Count;
         if (_commndIndex >= count)
         {
-            //Plugin.Logger.LogDebug("End of story: " + _index);
+            //Log.Debug("End of story: " + _index);
             return;
         }
 

@@ -12,7 +12,7 @@ public class SugoiExitPatch
     
     public static void Postfix(SugoiOfflineTranslatorEndpoint __instance, Process ___process)
     {
-        Plugin.Logger.LogInfo("SugoiOfflineTranslatorEndpoint.StartProcess");
+        Log.Info("SugoiOfflineTranslatorEndpoint.StartProcess");
         process = ___process;
     }
 }
@@ -22,7 +22,7 @@ public class SugoiExitPatch2
 {
     public static void Prefix()
     {
-        Plugin.Logger.LogInfo("Toolbox.ApplicationQuit");
+        Log.Info("Toolbox.ApplicationQuit");
         SugoiExitPatch.process?.Kill();
     }
 }

@@ -23,8 +23,8 @@ public class HarmonyPatchController
                         _patchClassProcessorList.Add(type, _harmonyInstance.CreateClassProcessor(type));  
                     } catch (Exception e)
                     {
-                        Plugin.Logger.LogError("Failed to create class processor for " + type.FullName);
-                        Plugin.Logger.LogError(e);
+                        Log.Error("Failed to create class processor for " + type.FullName);
+                        Log.Error(e);
                     }
                     
                 }
@@ -38,7 +38,7 @@ public class HarmonyPatchController
 
         if (!_patchClassProcessorList?.Any() ?? true)
         {
-            Plugin.Logger.LogError("No patches found");
+            Log.Error("No patches found");
             return;
         }
         
@@ -50,8 +50,8 @@ public class HarmonyPatchController
             }
             catch (Exception e)
             {
-                Plugin.Logger.LogError("Failed to install patch " + entry.Key.FullName);
-                Plugin.Logger.LogError(e);
+                Log.Error("Failed to install patch " + entry.Key.FullName);
+                Log.Error(e);
             }
         }
     }

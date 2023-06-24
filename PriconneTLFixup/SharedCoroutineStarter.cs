@@ -14,7 +14,7 @@ public class CoroutineStarter : MonoBehaviour
         {
             if (_instance == null)
             {
-                Plugin.Logger.LogDebug("Creating new CoroutineStarter");
+                Log.Debug("Creating new CoroutineStarter");
                 ClassInjector.RegisterTypeInIl2Cpp<CoroutineStarter>();
                 var gameObject = new GameObject();
                 _instance = gameObject.AddComponent<CoroutineStarter>();

@@ -8,21 +8,20 @@ namespace PriconneTLFixup;
 [BepInProcess("PrincessConnectReDive.exe")]
 public class Plugin: BasePlugin
 {
-    internal static ManualLogSource Logger = null!;
     private readonly HarmonyPatchController _harmonyController = new();
     
     public override void Load()
     {
-        Logger = Log;
+        PriconneTLFixup.Log.BieLogger = Log;
         _harmonyController.PatchAll();
-        Logger.LogInfo("PriconneTLFixup loaded!");
-        Logger.LogInfo("If you want to contribute to this project, please visit:");
-        Logger.LogInfo("https://github.com/Kevga/PriconneTLFixup");
+        PriconneTLFixup.Log.Info("PriconneTLFixup loaded!");
+        PriconneTLFixup.Log.Info("If you want to contribute to this project, please visit:");
+        PriconneTLFixup.Log.Info("https://github.com/Kevga/PriconneTLFixup");
     }
     
     public override bool Unload()
     {
-        Logger.LogInfo("Shutting down...");
+        PriconneTLFixup.Log.Info("Shutting down...");
         _harmonyController.UnpatchSelf();
         return true;
     }
