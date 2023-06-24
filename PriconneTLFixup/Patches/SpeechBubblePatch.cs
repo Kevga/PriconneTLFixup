@@ -72,7 +72,7 @@ public class SpineDramaControllerBalloonPatch
         }
         
         var correctedDelay = fadeoutDelayOffset;
-        if (text.Length > 0 && !tapSkip)
+        if (text.Length > 0 && (!tapSkip || !tapWait))
         {
             if (charsPerSecond > 0)
             {
