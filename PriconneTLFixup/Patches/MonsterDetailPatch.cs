@@ -13,15 +13,16 @@ namespace PriconneTLFixup.Patches;
  * - Adds line breaks before each bullet point
  */
 
-[HarmonyPatch(typeof(PartsDialogMonsterDetail), nameof(PartsDialogMonsterDetail.stringToLineStringList))]
+[HarmonyPatch(typeof(PartsMonsterDetailTextController), nameof(PartsMonsterDetailTextController.Initialize))]
 [HarmonyWrapSafe]
-public class MonsterDetailPatch
+public class SkillDescriptionPatch
 {
-    public static bool Prefix(ref Il2CppSystem.Collections.Generic.List<string> __result, string _string)
+    public static void Prefix(ref Il2CppSystem.Collections.Generic.List<string> _monsterDetailTextList)
     {
-        __result = new Il2CppSystem.Collections.Generic.List<string>();
-        __result.Add(_string);
-        return false;
+        var finalList = new Il2CppSystem.Collections.Generic.List<string>();
+        var _string = _monsterDetailTextList.ToArray().Join(null, "\n");
+        finalList.Add(_string);
+        _monsterDetailTextList = finalList;
     }
 }
 
@@ -53,8 +54,8 @@ public class MonsterDetailOverflowPatch
             if (textPlate.detailText.text != text)
             {
                 var updatedText = textPlate.detailText.text;
-                updatedText = updatedText.Replace("・", "\n・");
-                updatedText = updatedText.Replace("\n\n・", "\n・");
+                updatedText = updatedText.Replace("・", "\n\n・");
+                updatedText = updatedText.Replace("\n\n\n・", "\n\n・");
                 textPlate.detailText.text = updatedText;
                 text = updatedText;
             }
