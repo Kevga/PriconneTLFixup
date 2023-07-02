@@ -9,6 +9,7 @@
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
         <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+        <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
     </PropertyGroup> 
 
     <ItemGroup>
@@ -148,6 +149,10 @@
         <Reference Include="UnityEngine.XRModule">
             <HintPath>..\libs\UnityEngine\cpp2ilinterop\UnityEngine.XRModule.dll</HintPath>
         </Reference>
+    </ItemGroup> 
+
+    <ItemGroup>
+      <PackageReference Include="Fastenshtein" Version="1.0.0.8" />
     </ItemGroup>
 
     <Target Name="CopyToGameDir" AfterTargets="AfterBuild">
