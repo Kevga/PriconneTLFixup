@@ -38,3 +38,28 @@ public class MaximizePatch
         return false;
     }
 }
+
+[HarmonyPatch(typeof(HeaderController), nameof(HeaderController.RestoreSlideIn))]
+public class HeaderPatch
+{
+    public static bool Prefix(HeaderController __instance, float _time = 0.1f)
+    {
+        var tweenPosition = TweenPosition.Begin(__instance.slideObjTop, _time, Vector3.zero);
+        CoroutineStarter.Instance.StartCoroutine(WaitForTween(tweenPosition).WrapToIl2Cpp());
+        return false;
+    }
+    
+    public static IEnumerator WaitForTween(TweenPosition tween)
+    {
+        while (tween.enabled)
+        {
+            yield return null;
+        }
+
+        Log.Debug("Tween finished");
+        UIRoot.Broadcast("UpdateAnchors");
+        var func = UICamera.onScreenResize;
+        if (func == null) yield break;
+        func.Invoke();
+    } 
+}
