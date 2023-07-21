@@ -2,6 +2,8 @@
 using BepInEx.Unity.IL2CPP.Utils.Collections;
 using Elements;
 using HarmonyLib;
+using UnityEngine;
+
 // ReSharper disable InconsistentNaming
 
 namespace PriconneTLFixup.Patches;
@@ -58,6 +60,14 @@ public class MonsterDetailOverflowPatch
                 updatedText = updatedText.Replace("\n\n\n・", "\n\n・");
                 textPlate.detailText.text = updatedText;
                 text = updatedText;
+                yield return null;
+                var scrollView = GameObject.Find(
+                    "_Game(Clone)/UI Root/FrontArea/IgnoreBlurLayer/DialogArea/DialogCommonMiddle(Clone)/Main/PartsParent/PartsDialogMonsterDetail(Clone)/GUIPanel_DialogCommonSmall/GUIGroup_DialogContents/ScrollContent/ScrollView/WrapContent/PartsMonsterDetailTextPlate(Clone)/");
+                if (scrollView != null)
+                {
+                    var scrollRect = scrollView.GetComponent<UIDragScrollView>();
+                    scrollRect.CallOnPress();
+                }
             }
 
             yield return null;
