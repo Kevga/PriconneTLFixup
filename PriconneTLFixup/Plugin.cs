@@ -1,4 +1,4 @@
-﻿using BepInEx;
+using BepInEx;
 using BepInEx.Logging;
 using BepInEx.Unity.IL2CPP;
 
@@ -12,6 +12,15 @@ public class Plugin: BasePlugin
     
     public override void Load()
     {
+        try
+        {
+            Console.OutputEncoding = System.Text.Encoding.UTF8;
+        } catch (Exception e)
+        {
+            PriconneTLFixup.Log.Error("Failed to set console encoding to UTF8. Japanese characters may not display correctly.");
+            PriconneTLFixup.Log.Error(e);
+        }
+
         PriconneTLFixup.Log.BieLogger = Log;
         _harmonyController.PatchAll();
         PriconneTLFixup.Log.Info("PriconneTLFixup loaded!");
