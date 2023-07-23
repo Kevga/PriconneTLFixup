@@ -1,9 +1,12 @@
 ﻿// ReSharper disable InconsistentNaming
 
+using System.Collections;
 using System.Text.RegularExpressions;
+using BepInEx.Unity.IL2CPP.Utils.Collections;
 using Elements;
 using HarmonyLib;
 using Il2CppInterop.Runtime.InteropTypes.Arrays;
+using UnityEngine;
 using Object = Il2CppSystem.Object;
 
 namespace PriconneTLFixup.Patches;
@@ -96,6 +99,173 @@ public class StoryColorRemovalPatch
         __instance.textLabel.color = textColor;
         __instance.newTextStr = Regex.Replace(__instance.newTextStr, @"\[([0-9A-F]{8})\]", "");
         Log.Debug("After: " + __instance.newTextStr);
+    }
+}
+
+
+/**
+ * Pretranslate story text in the background to remove the MTL delay.
+ */
+[HarmonyPatch(typeof(StoryManager), nameof(StoryManager.StartStory))]
+[HarmonyWrapSafe]
+public static class StoryPretranslationPatch
+{
+    internal static CustomUILabel? PretranslationLabel;
+    private static int currentTranslationIndex;
+    private static Regex userNameImplement = new("\\{0\\}", RegexOptions.Compiled);
+    private static Regex deleteDoubleQuotation = new("^\"(.*)\"$", RegexOptions.Compiled);
+
+    public static void Postfix(StoryManager __instance)
+    {
+        if (PretranslationLabel == null)
+        {
+            var pretranslationGameObject = new GameObject();
+            pretranslationGameObject.transform.localPosition = new Vector3(0, -1000, 0);
+            PretranslationLabel = pretranslationGameObject.AddComponent<CustomUILabel>();
+            PretranslationLabel.name = "PriconneTLFixupStoryPretranslationLabel";
+            Log.Info("Created pre-translation label");
+        }
+        
+        CoroutineStarter.Instance.StartCoroutine(PretranslationCoroutine(__instance).WrapToIl2Cpp());
+    }
+    
+    internal static IEnumerator PretranslationCoroutine(StoryManager manager)
+    {
+        var commands = manager.storyCommandList?.ToArray();
+        const int stallTime = 4000;
+        Log.Debug("Starting pretranslation of story");
+        yield return null;
+
+        var currentText = "";
+        var lastUpdate = DateTime.Now.Ticks / TimeSpan.TicksPerMillisecond;
+        while (PretranslationLabel != null && manager != null && !manager.IsEndStory)
+        {
+            //If a video is playing, pause story pretranslation to make room for subtitle pretranslation
+            if (manager.movieManager != null && manager.movieManager.IsPlay())
+            {
+                yield return null;
+                continue;
+            }
+            
+            //Wait for XUAT to translate and update the label before continuing. If not updated within stallTime, continue anyway.
+            if (currentText != "" && currentText == PretranslationLabel.text && ((DateTime.Now.Ticks / TimeSpan.TicksPerMillisecond) - lastUpdate) < stallTime)
+            {
+                yield return null;
+                continue;
+            }
+
+            //Advance the current translation index if the story has progressed beyond it
+            if (manager.currentCommandIndex >= currentTranslationIndex)
+            {
+                currentTranslationIndex = manager.currentCommandIndex+1;
+            }
+
+            //Load the next story line
+            var text = GetNextStringToTranslate(commands, currentTranslationIndex+1);
+            text = ReplacePlayerName(text);
+            
+            //If there is no more text, stop pretranslation
+            if (text is null or "")
+            {
+                yield return null;
+                break;
+            }
+            
+            lastUpdate = DateTime.Now.Ticks / TimeSpan.TicksPerMillisecond;
+            currentText = text;
+            PretranslationLabel.SetText(currentText);
+            Log.Debug("Pretranslating: " + currentText);
+            
+            //rate limit sub translation requests
+            yield return new WaitForSecondsRealtime(2f); 
+        }
+        
+        Log.Debug("Pretranslation finished");
+        if (PretranslationLabel != null)
+        {
+            PretranslationLabel.SetText("");
+        }
+    }
+    
+    internal static string ReplacePlayerName(string text)
+    {
+        var playerName = Singleton<UserData>.Instance.UserInfo.UserName;
+        if (playerName == null)
+        {
+            return text;
+        }
+        return userNameImplement.Replace(text, playerName);
+    }
+    
+    internal static string GetNextStringToTranslate(CommandStruct[] commands, int startIndex)
+    {
+        if (startIndex >= commands.Length)
+        {
+            return "";
+        }
+
+        var nextInteraction = GetNextInteractionIndex(commands, startIndex);
+        currentTranslationIndex = nextInteraction;
+        for (var i = startIndex; i < nextInteraction; i++)
+        {
+            Log.Debug("Command ["+i+"]: " + commands[i].Number + " - Args: " + string.Join(", ", commands[i].Args.ToArray()));
+        }
+        /*if (nextInteraction == startIndex && commands[nextInteraction].Number == CommandNumber.CHOICE)
+        {
+            //commands[nextInteraction].Args.ToArray()
+            return "";
+        }*/
+
+        if (nextInteraction == startIndex)
+        {
+            return GetNextStringToTranslate(commands, nextInteraction + 1);
+        }
+        
+        if (nextInteraction == -1)
+        {
+            return "";
+        }
+        
+        return GetPrintTextBetween(commands, startIndex, nextInteraction);
+    }
+    
+    internal static int GetNextInteractionIndex(CommandStruct[] commands, int index)
+    {
+        if (index >= commands.Length)
+        {
+            return -1;
+        }
+        
+        for (var i = index + 1; i < commands.Length; i++)
+        {
+            if (commands[i].Number == CommandNumber.TOUCH || commands[i].Number == CommandNumber.TOUCH_TO_START || commands[i].Number == CommandNumber.CHOICE)
+            {
+                return i;
+            }
+        }
+        
+        return -1;
+    }
+    
+    internal static string GetPrintTextBetween(CommandStruct[] commands, int startIndex, int endIndex)
+    {
+        if (startIndex >= commands.Length)
+        {
+            return "";
+        }
+        
+        var text = "";
+        for (var i = startIndex; i < commands.Length && i < endIndex; i++)
+        {
+            if (commands[i].Number == CommandNumber.PRINT)
+            {
+                text += commands[i].Args.ToArray()[1];
+            }
+        }
+        
+        text = text.Replace("\\n", "\n");
+        
+        return text;
     }
 }
 
