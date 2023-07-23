@@ -71,4 +71,23 @@ public static class Util
 
         return go;
     }
+    
+    public class WaitForSecondsOrPredicate : CustomYieldInstruction
+    {
+        private readonly Func<bool> _predicate;
+        private float _timeout;
+        private bool KeepWaiting()
+        {
+            _timeout -= Time.deltaTime;
+            return _timeout > 0f && !_predicate();
+        }
+ 
+        public override bool keepWaiting => KeepWaiting();
+
+        public WaitForSecondsOrPredicate(float timeout, Func<bool> predicate)
+        {
+            _predicate = predicate;
+            _timeout = timeout;
+        }
+    }
 }
