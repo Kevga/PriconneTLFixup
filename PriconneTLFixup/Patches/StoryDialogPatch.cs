@@ -61,6 +61,45 @@ public class StoryDialogPatch
 }
 
 /**
+ * Remove color codes from the text before it's printed. Parse that color and apply directly to the label.
+ * This keeps translation rules cleaner and allows for the same rule to be used for dialog and the log.
+ */
+[HarmonyPatch(typeof(StoryCommandPrint), nameof(StoryCommandPrint.SetCommandParam))]
+[HarmonyWrapSafe]
+public class StoryColorRemovalPatch
+{
+    internal static readonly Regex ColorCodeRegex = new(@"\[([0-9A-Fa-fsS]{6,10})\]", RegexOptions.Compiled);
+    public static void Postfix(StoryCommandPrint __instance)
+    {
+        Log.Debug("Before: " + __instance.newTextStr);
+        var lastColorCode = "";
+        var colorCodes = TranslationPreprocessorPatch.PostTranslationColorCodeRegex.Matches(__instance.newTextStr).ToList();
+        if (colorCodes.Count > 0)
+        {
+            lastColorCode = colorCodes[^1].Groups[1].Value;
+        }
+
+        var textColor = Color.white;
+        if (lastColorCode.Length == 6)
+        {
+            textColor = NGUIText.ParseColor(lastColorCode, 0);
+        } 
+        else if (lastColorCode.Length == 8)
+        {
+            textColor = NGUIText.ParseColor32(lastColorCode, 0);
+        }
+        else
+        {
+            Log.Warn("Invalid color code: " + lastColorCode);
+        }
+        Log.Debug("Color: " + textColor);
+        __instance.textLabel.color = textColor;
+        __instance.newTextStr = Regex.Replace(__instance.newTextStr, @"\[([0-9A-F]{8})\]", "");
+        Log.Debug("After: " + __instance.newTextStr);
+    }
+}
+
+/**
  * This patch calls FeedPage whenever possible to skip all WAIT commands and finish the typewriting effect.
  * This allows the translation endpoint to translate the entire text at once, improving speed and quality.
  */
