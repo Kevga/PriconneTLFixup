@@ -158,6 +158,12 @@
     <Target Name="CopyToGameDir" AfterTargets="AfterBuild">
         <Message Text="Copying $(OutDir)$(AssemblyName).dll to game folder" Importance="high" />
         <Copy SourceFiles="$(OutDir)$(AssemblyName).dll" DestinationFiles="$(GameDir)\BepInEx\plugins\$(AssemblyName).dll" />
+        <Copy SourceFiles="$(OutDir)$(AssemblyName).pdb" DestinationFiles="$(GameDir)\BepInEx\plugins\$(AssemblyName).pdb" />
     </Target>
+
+    <Target Name="PreBuild" BeforeTargets="PreBuildEvent">
+        <Exec Command="powershell -ExecutionPolicy Bypass -File UpdateVersion.ps1" />
+    </Target>
+
 
 </Project>
