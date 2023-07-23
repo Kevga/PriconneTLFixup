@@ -10,7 +10,7 @@ public class SugoiExitPatch
 {
     internal static Process? process;
     
-    public static void Postfix(SugoiOfflineTranslatorEndpoint __instance, Process ___process)
+    public static void Postfix(Process ___process)
     {
         Log.Info("SugoiOfflineTranslatorEndpoint.StartProcess");
         process = ___process;

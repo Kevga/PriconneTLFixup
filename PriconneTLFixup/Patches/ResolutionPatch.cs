@@ -1,4 +1,7 @@
-﻿using HarmonyLib;
+﻿using System.Collections;
+using BepInEx.Unity.IL2CPP.Utils.Collections;
+using Elements;
+using HarmonyLib;
 using UnityEngine;
 
 namespace PriconneTLFixup.Patches;

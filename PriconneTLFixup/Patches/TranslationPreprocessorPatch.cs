@@ -14,8 +14,8 @@ namespace PriconneTLFixup.Patches;
 [HarmonyWrapSafe]
 public static class TranslationPreprocessorPatch
 {
-    private static readonly Regex ColorCodeRegex = new(@"\[([0-9A-Fa-fS]{6,10})\]", RegexOptions.Compiled);
-    private static readonly Regex ColorGradientRegex = new(@"\[([0-9A-Fa-f,S\s]{13,20})\]", RegexOptions.Compiled);
+    internal static readonly Regex PostTranslationColorCodeRegex = new(@"[\[\(]([0-9A-Fa-fsS]{6,10})[\]\)]", RegexOptions.Compiled);
+    private static readonly Regex ColorGradientRegex = new(@"[\[\(]([0-9A-Fa-f,sS\s]{13,20})[\]\)]", RegexOptions.Compiled);
     private const int COLOR_DISTANCE_THRESHOLD = 3;
     private const int GRADIENT_DISTANCE_THRESHOLD = 5;
 
@@ -26,14 +26,9 @@ public static class TranslationPreprocessorPatch
             return;
         }
 
-        var preTLColorMatches = ColorCodeRegex.Matches(originalText);
+        var preTLColorMatches = PostTranslationColorCodeRegex.Matches(originalText);
         var distinctPreTLColorMatches = preTLColorMatches.OfType<Match>().GroupBy(x => x.Value).Select(x =>x.First()).ToList();
-        if (distinctPreTLColorMatches.Count > 0)
-        {
-            text = preTLColorMatches[^1].Value + text;
-        }
-        
-        var postTLColorMatches = ColorCodeRegex.Matches(text);
+        var postTLColorMatches = PostTranslationColorCodeRegex.Matches(text);
         
         foreach (var preTLColorMatch in distinctPreTLColorMatches)
         {
@@ -59,11 +54,13 @@ public static class TranslationPreprocessorPatch
         
         foreach (var preTLGradientMatch in distinctPreTLGradientMatches)
         {
-            Log.Debug("PreTLGradientMatch: " + preTLGradientMatch.Value);
             Levenshtein Levenshtein = new(preTLGradientMatch.Value);
             foreach (Match postTLGradientMatch in colorGradientMatchsPost)
             {
-                Log.Debug("PostTLGradientMatch: " + postTLGradientMatch.Value);
+                if (postTLGradientMatch.Value == preTLGradientMatch.Value)
+                {
+                    continue;
+                }
                 
                 if (Levenshtein.DistanceFrom(postTLGradientMatch.Value) <= GRADIENT_DISTANCE_THRESHOLD)
                 {
@@ -79,6 +76,7 @@ public static class TranslationPreprocessorPatch
             }
         }
 
+        text = text.Replace("[- ]", "[-]");
         text = text.Replace("[--]", "[-]");
         text = text.Replace("⁇", "");
         text = text.Replace("unk>", "");

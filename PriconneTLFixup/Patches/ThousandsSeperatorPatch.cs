@@ -92,7 +92,7 @@ public class ThousandsSeperatorSoloNumberPatch
 public class ThousandsSeperatorPostTranslationPatch
 {
     private static readonly Regex NumberRegex = new(@"\d{4,}", RegexOptions.Compiled | RegexOptions.Singleline);
-    private static readonly Regex DateRegex = new(@"\d{2,4}[/\.\-]\d{2}[/\.\-]\d{2,4}", RegexOptions.Compiled);
+    internal static readonly Regex DateRegex = new(@"\d{2,4}[/\.\-]\d{2}[/\.\-]\d{2,4}", RegexOptions.Compiled);
     internal static readonly CultureInfo Culture = new("en-US");
 
     public static void Prefix(ref string text)
@@ -122,6 +122,7 @@ public class ThousandsSeperatorPostTranslationPatch
 
             if (!ThousandsSeperatorDictionary32Patch.ConvertedNumberDictionary.TryGetValue(intVal, out _))
             {
+                Log.Debug($"Could not find {intVal} in dictionary (AutoTranslationPlugin.SetText)");
                 continue;
             }
 
@@ -224,11 +225,19 @@ public class ThousandsSeperatorDictionaryCustomUILabelPatch
         {
             return;
         }
+        
+        if (ThousandsSeperatorPostTranslationPatch.DateRegex.IsMatch(__instance.text))
+        {
+            Log.Debug($"Skipping {__instance.name} because it contains a date");
+            return;
+        }
+        
         var formattedNumberString = value.ToString("#,0", ThousandsSeperatorPostTranslationPatch.Culture);
         if (formattedNumberString == value.ToString())
         {
             return;
         }
         __instance.text = __instance.text.Replace(value.ToString(), formattedNumberString);
+        Log.Debug($"Replaced {value} with {formattedNumberString} in {__instance.name} (CustomUILabel.SetText)");
     }
 }

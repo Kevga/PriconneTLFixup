@@ -1,6 +1,5 @@
 ﻿using Il2CppInterop.Runtime.Injection;
 using UnityEngine;
-using Type = Il2CppSystem.Type;
 
 namespace PriconneTLFixup;
 
