@@ -2,7 +2,7 @@
 
     <PropertyGroup>
         <Authors>Dakari</Authors>
-        <Version>1.2.0</Version>
+        <Version>1.3.0-beta1</Version>
         <Copyright>Dakari</Copyright>
         <Description>Fixes issues in Priconne that get caused by XUAT</Description>
         <TargetFramework>net6.0</TargetFramework>
@@ -10,13 +10,13 @@
         <Nullable>enable</Nullable>
         <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
         <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
-    </PropertyGroup> 
+    </PropertyGroup>
 
     <ItemGroup>
-        <Reference Include="Assembly-CSharp">
+        <Reference Include="Assembly-CSharp" Publicize="True">
             <HintPath>$(AppData)\BepInEx\PrincessConnectReDive\interop\Assembly-CSharp.dll</HintPath>
         </Reference>
-        <Reference Include="XUnity.AutoTranslator.Plugin.Core">
+        <Reference Include="XUnity.AutoTranslator.Plugin.Core" Publicize="True">
             <HintPath>$(GameDir)\BepInEx\plugins\XUnity.AutoTranslator\XUnity.AutoTranslator.Plugin.Core.dll</HintPath>
         </Reference>
         <Reference Include="XUnity.Common">
@@ -35,19 +35,19 @@
             <HintPath>..\libs\BepInEx.Unity.IL2CPP.dll</HintPath>
         </Reference>
         <Reference Include="Il2CppInterop.Common">
-          <HintPath>..\libs\Il2CppInterop\Il2CppInterop.Common.dll</HintPath>
+            <HintPath>..\libs\Il2CppInterop\Il2CppInterop.Common.dll</HintPath>
         </Reference>
         <Reference Include="Il2CppInterop.Generator">
-          <HintPath>..\libs\Il2CppInterop\Il2CppInterop.Generator.dll</HintPath>
+            <HintPath>..\libs\Il2CppInterop\Il2CppInterop.Generator.dll</HintPath>
         </Reference>
         <Reference Include="Il2CppInterop.HarmonySupport">
-          <HintPath>..\libs\Il2CppInterop\Il2CppInterop.HarmonySupport.dll</HintPath>
+            <HintPath>..\libs\Il2CppInterop\Il2CppInterop.HarmonySupport.dll</HintPath>
         </Reference>
         <Reference Include="Il2CppInterop.Runtime">
-          <HintPath>..\libs\Il2CppInterop\Il2CppInterop.Runtime.dll</HintPath>
+            <HintPath>..\libs\Il2CppInterop\Il2CppInterop.Runtime.dll</HintPath>
         </Reference>
-        <Reference Include="Il2Cppmscorlib">
-          <HintPath>..\libs\Il2Cppmscorlib.dll</HintPath>
+        <Reference Include="Il2CppSystem">
+            <HintPath>..\libs\Il2Cppmscorlib.dll</HintPath>
         </Reference>
 
         <Reference Include="UnityEngine.AIModule">
@@ -149,20 +149,21 @@
         <Reference Include="UnityEngine.XRModule">
             <HintPath>..\libs\UnityEngine\cpp2ilinterop\UnityEngine.XRModule.dll</HintPath>
         </Reference>
-    </ItemGroup> 
+    </ItemGroup>
 
     <ItemGroup>
-      <PackageReference Include="Fastenshtein" Version="1.0.0.8" />
+        <PackageReference Include="Fastenshtein" Version="1.0.0.8"/>
+        <PackageReference Include="BepInEx.AssemblyPublicizer.MSBuild" Version="0.4.1" PrivateAssets="all"/>
     </ItemGroup>
 
     <Target Name="CopyToGameDir" AfterTargets="AfterBuild">
-        <Message Text="Copying $(OutDir)$(AssemblyName).dll to game folder" Importance="high" />
-        <Copy SourceFiles="$(OutDir)$(AssemblyName).dll" DestinationFiles="$(GameDir)\BepInEx\plugins\$(AssemblyName).dll" />
-        <Copy SourceFiles="$(OutDir)$(AssemblyName).pdb" DestinationFiles="$(GameDir)\BepInEx\plugins\$(AssemblyName).pdb" />
+        <Message Text="Copying $(OutDir)$(AssemblyName).dll to game folder" Importance="high"/>
+        <Copy SourceFiles="$(OutDir)$(AssemblyName).dll" DestinationFiles="$(GameDir)\BepInEx\plugins\$(AssemblyName).dll"/>
+        <Copy SourceFiles="$(OutDir)$(AssemblyName).pdb" DestinationFiles="$(GameDir)\BepInEx\plugins\$(AssemblyName).pdb"/>
     </Target>
 
     <Target Name="PreBuild" BeforeTargets="PreBuildEvent">
-        <Exec Command="powershell -ExecutionPolicy Bypass -File UpdateVersion.ps1" />
+        <Exec Command="powershell -ExecutionPolicy Bypass -File UpdateVersion.ps1"/>
     </Target>
 
 

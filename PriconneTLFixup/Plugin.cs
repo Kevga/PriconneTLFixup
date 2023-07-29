@@ -1,10 +1,9 @@
 using BepInEx;
-using BepInEx.Logging;
 using BepInEx.Unity.IL2CPP;
 
 namespace PriconneTLFixup;
 
-[BepInPlugin("PriconneTLFixup", "PriconneTLFixup by Dakari", "1.2.0")]
+[BepInPlugin("PriconneTLFixup", "PriconneTLFixup by Dakari", "1.3.0-beta1")]
 [BepInProcess("PrincessConnectReDive.exe")]
 public class Plugin: BasePlugin
 {
@@ -15,7 +14,8 @@ public class Plugin: BasePlugin
         try
         {
             Console.OutputEncoding = System.Text.Encoding.UTF8;
-        } catch (Exception e)
+        } 
+        catch (Exception e)
         {
             PriconneTLFixup.Log.Error("Failed to set console encoding to UTF8. Japanese characters may not display correctly.");
             PriconneTLFixup.Log.Error(e);

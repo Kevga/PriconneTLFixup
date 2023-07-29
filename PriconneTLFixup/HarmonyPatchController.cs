@@ -20,6 +20,7 @@ public class HarmonyPatchController
                 {
                     try
                     {
+                        Log.Debug("Creating class processor for " + type.FullName);
                         _patchClassProcessorList.Add(type, _harmonyInstance.CreateClassProcessor(type));  
                     } catch (Exception e)
                     {
@@ -46,6 +47,7 @@ public class HarmonyPatchController
         {
             try
             {
+                Log.Debug("Patching " + entry.Key.FullName);
                 entry.Value.Patch();
             }
             catch (Exception e)
