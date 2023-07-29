@@ -7,6 +7,7 @@ using Elements;
 using HarmonyLib;
 using Il2CppInterop.Runtime.InteropTypes.Arrays;
 using UnityEngine;
+using XUnity.AutoTranslator.Plugin.Core;
 using Object = Il2CppSystem.Object;
 
 namespace PriconneTLFixup.Patches;
@@ -17,16 +18,22 @@ namespace PriconneTLFixup.Patches;
  * We reimplement setPrintText while keeping track of the original name, ignoring changes from the translation plugin.
  */
 [HarmonyPatch(typeof(StoryCommandPrint), nameof(StoryCommandPrint.setPrintText))]
+[HarmonyWrapSafe]
 public class StoryDialogPatch
 {
     private static string currentName = "";
+    private static string currentText = "";
+    internal static long typeWriterFinishTime;
     
     public static bool Prefix(StoryCommandPrint __instance, EventDelegate.Callback _typewriteFinishAction)
     {
+        var now = DateTime.Now.Ticks / TimeSpan.TicksPerMillisecond;
+        typeWriterFinishTime = (long) Math.Round(((__instance.textLabel.text.Length + __instance.newTextStr.Length) / (__instance.typewriteSpeed / 2f)) * 1000) + now;
+        Log.Debug($"Delaying by {((__instance.textLabel.text.Length + __instance.newTextStr.Length) / (__instance.typewriteSpeed / 2f))}s");
         setPrintText(__instance, _typewriteFinishAction);
         return false;
     }
-    
+
     internal static void setPrintText(StoryCommandPrint __instance, EventDelegate.Callback _typewriteFinishAction)
     {
         var offset = 0;
@@ -44,22 +51,55 @@ public class StoryDialogPatch
         if (!__instance.isBetweenCommand && currentName == __instance.newNameStr)
         {
             offset = __instance.textLabel.text.Length;
-            __instance.newTextStr = __instance.textLabel.text + __instance.newTextStr;
+            __instance.newTextStr = currentText + __instance.newTextStr;
         }
         
         currentName = __instance.newNameStr;
-        __instance.nameLabel.SetText(__instance.newNameStr, new Il2CppReferenceArray<Object>(0L));
-        __instance.textLabel.SetText(__instance.newTextStr, new Il2CppReferenceArray<Object>(0L));
+        currentText = __instance.newTextStr;
         __instance.NameText = __instance.newNameStr;
-        __instance.Text = __instance.newTextStr;
-        typewriterEffect.ResetToOffset(offset);
-        if (__instance.textLabel.text.Length == __instance.newTextStr.Length)
+        __instance.nameLabel.SetText(__instance.newNameStr, new Il2CppReferenceArray<Object>(0L));
+
+        if (!StoryManagerPatch.isPrintNext(__instance.storyManager.storyCommandList.ToArray(),
+                __instance.storyManager.currentCommandIndex))
         {
-            _typewriteFinishAction.Invoke();
-            return;
+            __instance.textLabel.SetText(currentText, new Il2CppReferenceArray<Object>(0L));
+            __instance.Text = __instance.newTextStr;
+            currentText = "";
         }
-        EventDelegate.Add(typewriterEffect.onFinished, _typewriteFinishAction);
+        
+        //Log.Debug($"setPrintText: {__instance.newTextStr}");
+        typewriterEffect.ResetToOffset(offset);
+        _typewriteFinishAction.Invoke();
         typewriterEffect.Finish();
+    }
+}
+
+[HarmonyPatch(typeof(StoryScene), nameof(StoryScene.onClickNextCommand))]
+[HarmonyWrapSafe]
+public class StoryAutoDelayPatch
+{
+    public static bool Prefix(StoryScene __instance, bool _autoClick)
+    {
+        if (!__instance.storyManager.NoVoice)
+        {
+            if (_autoClick && StoryDialogPatch.typeWriterFinishTime >
+                DateTime.Now.Ticks / TimeSpan.TicksPerMillisecond)
+            {
+                return false;
+            }
+            
+            return true;
+        }
+        
+        if (__instance.IsAutoPlay)
+        {
+            if ((__instance.lipSyncCoroutineList != null && __instance.isPlayLipsync && __instance.lipSyncCoroutineList.Count > __instance.lipSyncIndex) || StoryDialogPatch.typeWriterFinishTime > DateTime.Now.Ticks / TimeSpan.TicksPerMillisecond)
+            {
+                return false;
+            }
+        }
+
+        return true;
     }
 }
 
@@ -71,10 +111,10 @@ public class StoryDialogPatch
 [HarmonyWrapSafe]
 public class StoryColorRemovalPatch
 {
-    internal static readonly Regex ColorCodeRegex = new(@"\[([0-9A-Fa-fsS]{6,10})\]", RegexOptions.Compiled);
+    internal static readonly Regex ColorCodeRegex = new(@"\[([0-9A-Fa-fsS]{6,8})\]", RegexOptions.Compiled);
     public static void Postfix(StoryCommandPrint __instance)
     {
-        Log.Debug("Before: " + __instance.newTextStr);
+        //Log.Debug("Before: " + __instance.newTextStr);
         var lastColorCode = "";
         var colorCodes = TranslationPreprocessorPatch.PostTranslationColorCodeRegex.Matches(__instance.newTextStr).ToList();
         if (colorCodes.Count > 0)
@@ -95,10 +135,10 @@ public class StoryColorRemovalPatch
         {
             Log.Warn("Invalid color code: " + lastColorCode);
         }
-        Log.Debug("Color: " + textColor);
+        //Log.Debug("Color: " + textColor);
         __instance.textLabel.color = textColor;
-        __instance.newTextStr = Regex.Replace(__instance.newTextStr, @"\[([0-9A-F]{8})\]", "");
-        Log.Debug("After: " + __instance.newTextStr);
+        __instance.newTextStr = ColorCodeRegex.Replace(__instance.newTextStr, "");
+        //Log.Debug("After: " + __instance.newTextStr);
     }
 }
 
@@ -137,11 +177,12 @@ public static class StoryPretranslationPatch
         yield return null;
 
         var currentText = "";
+        var synopsisTranslated = false;
         var lastUpdate = DateTime.Now.Ticks / TimeSpan.TicksPerMillisecond;
         while (PretranslationLabel != null && manager != null && !manager.IsEndStory)
         {
             //If a video is playing, pause story pretranslation to make room for subtitle pretranslation
-            if (manager.movieManager != null && manager.movieManager.IsPlay())
+            if ((manager.movieManager != null && manager.movieManager.IsPlay()))
             {
                 yield return null;
                 continue;
@@ -150,6 +191,18 @@ public static class StoryPretranslationPatch
             //Wait for XUAT to translate and update the label before continuing. If not updated within stallTime, continue anyway.
             if (currentText != "" && currentText == PretranslationLabel.text && ((DateTime.Now.Ticks / TimeSpan.TicksPerMillisecond) - lastUpdate) < stallTime)
             {
+                yield return null;
+                continue;
+            }
+
+            if (!synopsisTranslated)
+            {
+                lastUpdate = DateTime.Now.Ticks / TimeSpan.TicksPerMillisecond;
+                var isInsertStory = manager.storyMenu.isInsertStorySkip();
+                currentText = manager.StorySkipDialogParams.GetSynopsisLabelText(isInsertStory);
+                PretranslationLabel.SetText(currentText);
+                synopsisTranslated = true;
+                //Log.Debug("Pretranslating synopsis: " + currentText);
                 yield return null;
                 continue;
             }
@@ -163,6 +216,7 @@ public static class StoryPretranslationPatch
             //Load the next story line
             var text = GetNextStringToTranslate(commands, currentTranslationIndex+1);
             text = ReplacePlayerName(text);
+            text = StoryColorRemovalPatch.ColorCodeRegex.Replace(text, "");
             
             //If there is no more text, stop pretranslation
             if (text is null or "")
@@ -174,7 +228,7 @@ public static class StoryPretranslationPatch
             lastUpdate = DateTime.Now.Ticks / TimeSpan.TicksPerMillisecond;
             currentText = text;
             PretranslationLabel.SetText(currentText);
-            Log.Debug("Pretranslating: " + currentText);
+            //Log.Debug("Pretranslating: " + currentText);
             
             //rate limit sub translation requests
             yield return new WaitForSecondsRealtime(2f); 
@@ -208,7 +262,11 @@ public static class StoryPretranslationPatch
         currentTranslationIndex = nextInteraction;
         for (var i = startIndex; i < nextInteraction; i++)
         {
-            Log.Debug("Command ["+i+"]: " + commands[i].Number + " - Args: " + string.Join(", ", commands[i].Args.ToArray()));
+            if (commands[i].Number == CommandNumber.CHOICE)
+            {
+                currentTranslationIndex = i;
+                return commands[i].Args.ToArray()[0];
+            }
         }
         /*if (nextInteraction == startIndex && commands[nextInteraction].Number == CommandNumber.CHOICE)
         {
@@ -274,6 +332,7 @@ public static class StoryPretranslationPatch
  * This allows the translation endpoint to translate the entire text at once, improving speed and quality.
  */
 [HarmonyPatch(typeof(StoryManager), "execCommand")]
+[HarmonyWrapSafe]
 public static class StoryManagerPatch
 {
     private static bool shouldFeedPage;
@@ -285,7 +344,9 @@ public static class StoryManagerPatch
             return;
         }
 
-        var currentCommand = __instance.storyCommandList.ToArray()[_index];
+        var commands = __instance.storyCommandList.ToArray();
+        Log.Debug("Command ["+_index+"]: " + commands[_index].Number + " - Args: " + string.Join(", ", commands[_index].Args.ToArray()));
+        var currentCommand = commands[_index];
         if (currentCommand.Number == CommandNumber.PRINT)
         {
             shouldFeedPage = true;
@@ -365,6 +426,7 @@ public static class StoryManagerPatch
  * Same as above, but for tutorial stories. Should probably be refactored to use Harmony's TargetMethods.
  */
 [HarmonyPatch(typeof(TutorialStoryManager), "execCommand")]
+[HarmonyWrapSafe]
 public static class TutorialStoryManagerPatch
 {
     private static bool shouldFeedPage;
