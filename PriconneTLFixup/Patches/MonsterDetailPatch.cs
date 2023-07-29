@@ -14,7 +14,6 @@ namespace PriconneTLFixup.Patches;
  * - Enables wrapping of this one label
  * - Adds line breaks before each bullet point
  */
-
 [HarmonyPatch(typeof(PartsMonsterDetailTextController), nameof(PartsMonsterDetailTextController.Initialize))]
 [HarmonyWrapSafe]
 public class SkillDescriptionPatch
@@ -42,12 +41,19 @@ public class MonsterDetailScrollContainerPatch
 [HarmonyWrapSafe]
 public class MonsterDetailOverflowPatch
 {
+    internal static Coroutine? coroutine;
+
     public static void Postfix(PartsMonsterDetailTextPlate __instance)
     {
         __instance.detailText.overflowMethod = UILabel.Overflow.ResizeHeight;
-        CoroutineStarter.Instance.StartCoroutine(UpdateDetailTextPlate(__instance).WrapToIl2Cpp());
+        if (coroutine != null)
+        {
+            CoroutineStarter.Instance.StopCoroutine(coroutine);
+        }
+
+        coroutine = CoroutineStarter.Instance.StartCoroutine(UpdateDetailTextPlate(__instance).WrapToIl2Cpp());
     }
-    
+
     private static IEnumerator UpdateDetailTextPlate(PartsMonsterDetailTextPlate textPlate)
     {
         var text = "";
@@ -55,6 +61,7 @@ public class MonsterDetailOverflowPatch
         {
             if (textPlate.detailText.text != text)
             {
+                Log.Debug("Updating PartsMonsterDetailTextPlate text");
                 var updatedText = textPlate.detailText.text;
                 updatedText = updatedText.Replace("・", "\n\n・");
                 updatedText = updatedText.Replace("\n\n\n・", "\n\n・");
@@ -71,6 +78,22 @@ public class MonsterDetailOverflowPatch
             }
 
             yield return null;
+        }
+
+        Log.Debug("PartsMonsterDetailTextPlate destroyed");
+    }
+}
+
+[HarmonyPatch(typeof(PartsDialogMonsterDetail), nameof(PartsDialogMonsterDetail.OnDestroy))]
+[HarmonyWrapSafe]
+public class MonsterDetailScrollContainerPatch2
+{
+    public static void Postfix()
+    {
+        Log.Debug("PartsDialogMonsterDetail destroyed");
+        if (MonsterDetailOverflowPatch.coroutine != null)
+        {
+            CoroutineStarter.Instance.StopCoroutine(MonsterDetailOverflowPatch.coroutine);
         }
     }
 }
