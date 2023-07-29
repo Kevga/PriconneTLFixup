@@ -104,3 +104,59 @@ public class BossGaugePatch
         }
     }
 }
+
+[HarmonyPatch(typeof(PartsDialogShopMemoryPieceDealConfirm),
+    nameof(PartsDialogShopMemoryPieceDealConfirm.InitializeParam))]
+[HarmonyWrapSafe]
+public class MemoryPieceDealConfirmPatch
+{
+    public static void Postfix(PartsDialogShopMemoryPieceDealConfirm __instance)
+    {
+        __instance.alertLabel.overflowMethod = UILabel.Overflow.ResizeFreely;
+        for (var i = 0; i < __instance.alertObject.transform.childCount; i++)
+        {
+            var child = __instance.alertObject.transform.GetChild(i);
+            if (child.name != "common_icon_alert")
+            {
+                continue;
+            }
+
+            child.gameObject.SetActive(false);
+        }
+    }
+}
+
+[HarmonyPatch]
+[HarmonyWrapSafe]
+public class UnitIconPatch
+{
+    static IEnumerable<MethodBase> TargetMethods()
+   {
+       yield return AccessTools.Method(typeof(UnitIcon), nameof(UnitIcon.updateTable));
+   }
+    
+    public static void Postfix(UnitIcon __instance)
+    {
+        if (__instance.statusValueLabel == null)
+        {
+            return;
+        }
+        __instance.statusNameLabel.fontSize = 18;
+        __instance.statusValueLabel.fontSize = 18;
+
+        while (true)
+        {
+            var nameSize = __instance.statusNameLabel.mCalculatedSize;
+            var valueSize = __instance.statusValueLabel.mCalculatedSize;
+            var newValueX = nameSize.x;
+            if (newValueX + valueSize.x > 122)
+            {
+                __instance.statusNameLabel.fontSize -= 1;
+                __instance.statusValueLabel.fontSize -= 1;
+                continue;
+            }
+            __instance.statusValueLabel.SetLocalPosX(newValueX);
+            break;
+        }
+    }
+}
