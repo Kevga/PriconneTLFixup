@@ -231,7 +231,7 @@ public static class StoryPretranslationPatch
             //Log.Debug("Pretranslating: " + currentText);
             
             //rate limit sub translation requests
-            yield return new WaitForSecondsRealtime(2f); 
+            yield return new WaitForSecondsRealtime(Util.GetTranslationDelayInSeconds()); 
         }
         
         Log.Debug("Pretranslation finished");

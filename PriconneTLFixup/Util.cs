@@ -5,6 +5,11 @@ namespace PriconneTLFixup;
 
 public static class Util
 {
+    public static float GetTranslationDelayInSeconds()
+    {
+        return Plugin.AutoTranslatorPlugin.TranslationManager.CurrentEndpoint.TranslationDelay;
+    }
+    
     public static string GetPath( this object obj )
     {
         var path = new StringBuilder();

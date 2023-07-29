@@ -1,5 +1,6 @@
 using BepInEx;
 using BepInEx.Unity.IL2CPP;
+using XUnity.AutoTranslator.Plugin.Core;
 
 namespace PriconneTLFixup;
 
@@ -8,6 +9,7 @@ namespace PriconneTLFixup;
 public class Plugin: BasePlugin
 {
     private readonly HarmonyPatchController _harmonyController = new();
+    internal static AutoTranslationPlugin AutoTranslatorPlugin = null!;
     
     public override void Load()
     {
