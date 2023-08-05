@@ -4,22 +4,21 @@ using UnityEngine;
 
 namespace PriconneTLFixup.Patches;
 
-[HarmonyPatch(typeof(BattleHeaderController), nameof(BattleHeaderController.Init))]
+[HarmonyPatch(typeof(PartsEventQuestAutoProgressInBattleInfo), nameof(PartsEventQuestAutoProgressInBattleInfo.Initialize))]
 public class UIMovePatch
 {
-    public static void Postfix(BattleHeaderController __instance)
+    public static void Postfix(PartsEventQuestAutoProgressInBattleInfo __instance)
     {
-        if (__instance == null || __instance.battleManager == null)
+        if (__instance == null)
         {
             return;
         }
 
-        if (!__instance.battleManager.IsQuestAutoProgressing())
+        var go = GameObject.Find("questauto_text_auro");
+        if (go == null)
         {
-            return;
+            go = GameObject.Find("questauto_text_auto"); //In case they ever fix the typo lmao
         }
-        
-        var go = GameObject.Find("_Game(Clone)/UI Root/ViewsArea/View/ViewBattle(Clone)/Header/AnchorTopLeft/AutoProgressInfoParent/PartsEventQuestAutoProgressInBattleInfo(Clone)/GUIGroup_QuestAuto/questauto_text_auro/");
         if (go == null)
         {
             return;
