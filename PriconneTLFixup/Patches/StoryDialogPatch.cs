@@ -7,7 +7,6 @@ using Elements;
 using HarmonyLib;
 using Il2CppInterop.Runtime.InteropTypes.Arrays;
 using UnityEngine;
-using XUnity.AutoTranslator.Plugin.Core;
 using Object = Il2CppSystem.Object;
 
 namespace PriconneTLFixup.Patches;
@@ -28,8 +27,9 @@ public class StoryDialogPatch
     public static bool Prefix(StoryCommandPrint __instance, EventDelegate.Callback _typewriteFinishAction)
     {
         var now = DateTime.Now.Ticks / TimeSpan.TicksPerMillisecond;
-        typeWriterFinishTime = (long) Math.Round(((__instance.textLabel.text.Length + __instance.newTextStr.Length) / (__instance.typewriteSpeed / 2f)) * 1000) + now;
-        Log.Debug($"Delaying by {((__instance.textLabel.text.Length + __instance.newTextStr.Length) / (__instance.typewriteSpeed / 2f))}s");
+        var delay = (currentText.Length + __instance.newTextStr.Length) / (__instance.typewriteSpeed / 1.75f);
+        typeWriterFinishTime = (long) Math.Round(delay * 1000) + now;
+        Log.Debug($"Delaying by {delay}s - currentText: {currentText.Length} - newText: {__instance.newTextStr.Length} - typewriteSpeed: {__instance.typewriteSpeed} - modifiedTypeWriterSpeed: {__instance.typewriteSpeed / 1.4f}");
         setPrintText(__instance, _typewriteFinishAction);
         return false;
     }
@@ -59,14 +59,32 @@ public class StoryDialogPatch
         __instance.NameText = __instance.newNameStr;
         __instance.nameLabel.SetText(__instance.newNameStr, new Il2CppReferenceArray<Object>(0L));
 
-        if (!StoryManagerPatch.isPrintNext(__instance.storyManager.storyCommandList.ToArray(),
-                __instance.storyManager.currentCommandIndex))
+        if (__instance.storyManager?.storyCommandList != null)
         {
-            __instance.textLabel.SetText(currentText, new Il2CppReferenceArray<Object>(0L));
-            __instance.Text = __instance.newTextStr;
-            currentText = "";
+            if (!StoryManagerPatch.isPrintNext(__instance.storyManager.storyCommandList.ToArray(),
+                    __instance.storyManager.currentCommandIndex))
+            {
+                __instance.textLabel.SetText(currentText, new Il2CppReferenceArray<Object>(0L));
+                __instance.Text = __instance.newTextStr;
+                currentText = "";
+            }
         }
-        
+        else if (__instance.tutorialStoryManager?.storyCommandList != null)
+        {
+            if (!StoryManagerPatch.isPrintNext(__instance.tutorialStoryManager.storyCommandList.ToArray(),
+                    __instance.tutorialStoryManager.currentCommandIndex))
+            {
+                __instance.textLabel.SetText(currentText, new Il2CppReferenceArray<Object>(0L));
+                __instance.Text = __instance.newTextStr;
+                currentText = "";
+            }
+        }
+        else
+        {
+            Log.Error("StoryManager is null");
+            throw new NotImplementedException();
+        }
+
         //Log.Debug($"setPrintText: {__instance.newTextStr}");
         typewriterEffect.ResetToOffset(offset);
         _typewriteFinishAction.Invoke();
@@ -93,7 +111,15 @@ public class StoryAutoDelayPatch
         
         if (__instance.IsAutoPlay)
         {
-            if ((__instance.lipSyncCoroutineList != null && __instance.isPlayLipsync && __instance.lipSyncCoroutineList.Count > __instance.lipSyncIndex) || StoryDialogPatch.typeWriterFinishTime > DateTime.Now.Ticks / TimeSpan.TicksPerMillisecond)
+            if (__instance.lipSyncCoroutineList != null)
+            {
+                if (__instance.isPlayLipsync && __instance.lipSyncCoroutineList.Count > __instance.lipSyncIndex)
+                {
+                    return false;
+                }
+            }
+            
+            if (StoryDialogPatch.typeWriterFinishTime > DateTime.Now.Ticks / TimeSpan.TicksPerMillisecond)
             {
                 return false;
             }
@@ -173,8 +199,11 @@ public static class StoryPretranslationPatch
             pretranslationGameObject.transform.localPosition = new Vector3(0, -1000, 0);
             PretranslationLabel = pretranslationGameObject.AddComponent<CustomUILabel>();
             PretranslationLabel.name = "PriconneTLFixupStoryPretranslationLabel";
-            Log.Info("Created pre-translation label");
+            UnityEngine.Object.DontDestroyOnLoad(PretranslationLabel);
+            Log.Info("Created story pre-translation label");
         }
+
+        currentTranslationIndex = 0;
         
         CoroutineStarter.Instance.StartCoroutine(PretranslationCoroutine(__instance).WrapToIl2Cpp());
     }
@@ -182,7 +211,12 @@ public static class StoryPretranslationPatch
     internal static IEnumerator PretranslationCoroutine(StoryManager manager)
     {
         var commands = manager.storyCommandList?.ToArray();
-        const int stallTime = 4000;
+        if (commands == null)
+        {
+            Log.Error("Story command list is null");
+            yield return null;
+        }
+        const int stallTime = 5000;
         Log.Debug("Starting pretranslation of story");
         yield return null;
 
@@ -191,6 +225,13 @@ public static class StoryPretranslationPatch
         var lastUpdate = DateTime.Now.Ticks / TimeSpan.TicksPerMillisecond;
         while (PretranslationLabel != null && manager != null && !manager.IsEndStory)
         {
+            //If there is no more text, stop pretranslation
+            if (currentTranslationIndex >= commands!.Length - 1)
+            {
+                yield return null;
+                break;
+            }
+            
             //If a video is playing, pause story pretranslation to make room for subtitle pretranslation
             if ((manager.movieManager != null && manager.movieManager.IsPlay()))
             {
@@ -205,7 +246,7 @@ public static class StoryPretranslationPatch
                 continue;
             }
 
-            if (!synopsisTranslated)
+            if (!synopsisTranslated && currentTranslationIndex > 12)
             {
                 lastUpdate = DateTime.Now.Ticks / TimeSpan.TicksPerMillisecond;
                 var isInsertStory = manager.storyMenu.isInsertStorySkip();
@@ -218,22 +259,16 @@ public static class StoryPretranslationPatch
             }
 
             //Advance the current translation index if the story has progressed beyond it
-            if (manager.currentCommandIndex >= currentTranslationIndex)
+            if (manager.currentCommandIndex > currentTranslationIndex && currentTranslationIndex > 12)
             {
+                Log.Debug("Advancing story pretranslation index to " + (manager.currentCommandIndex+1));
                 currentTranslationIndex = manager.currentCommandIndex+1;
             }
-
+            
             //Load the next story line
-            var text = GetNextStringToTranslate(commands, currentTranslationIndex+1);
+            var text = GetNextStringToTranslate(commands, currentTranslationIndex, ref currentTranslationIndex);
             text = ReplacePlayerName(text);
             text = StoryColorRemovalPatch.ColorCodeRegex.Replace(text, "");
-            
-            //If there is no more text, stop pretranslation
-            if (text is null or "")
-            {
-                yield return null;
-                break;
-            }
             
             lastUpdate = DateTime.Now.Ticks / TimeSpan.TicksPerMillisecond;
             currentText = text;
@@ -244,7 +279,7 @@ public static class StoryPretranslationPatch
             yield return new WaitForSecondsRealtime(Util.GetTranslationDelayInSeconds().HasValue ? Util.GetTranslationDelayInSeconds()!.Value : 2.5f); 
         }
         
-        Log.Debug("Pretranslation finished");
+        Log.Debug($"Story pretranslation finished (Index: {currentTranslationIndex} - Loop condition: {PretranslationLabel != null && manager != null && !manager.IsEndStory} - label null: " + (PretranslationLabel == null) + ", manager null: " + (manager == null) + ", story ended: " + (manager?.IsEndStory) + ")");
         if (PretranslationLabel != null)
         {
             PretranslationLabel.SetText("");
@@ -261,20 +296,44 @@ public static class StoryPretranslationPatch
         return userNameImplement.Replace(text, playerName);
     }
     
-    internal static string GetNextStringToTranslate(CommandStruct[] commands, int startIndex)
+    internal static string GetNextStringToTranslate(CommandStruct[] commands, int startIndex, ref int currentIndex)
     {
         if (startIndex >= commands.Length)
         {
             return "";
         }
 
-        var nextInteraction = GetNextInteractionIndex(commands, startIndex);
-        currentTranslationIndex = nextInteraction;
-        for (var i = startIndex; i < nextInteraction; i++)
+        var nextTranslatable = GetNextTranslatableIndex(commands, startIndex);
+        if (nextTranslatable == -1)
         {
+            currentIndex = commands.Length - 1;
+            return "";
+        }
+        currentIndex = nextTranslatable + 1;
+        for (var i = startIndex; i < nextTranslatable; i++)
+        {
+            Log.Debug("Command ["+i+"]: " + commands[i].Number + " - Args: " + string.Join(", ", commands[i].Args.ToArray()));
             if (commands[i].Number == CommandNumber.CHOICE)
             {
-                currentTranslationIndex = i;
+                currentIndex = i+1;
+                return commands[i].Args.ToArray()[0];
+            }
+
+            if (commands[i].Number == CommandNumber.TITLE)
+            {
+                currentIndex = i+1;
+                return commands[i].Args.ToArray()[0];
+            }
+            
+            if (commands[i].Number == CommandNumber.OUTLINE)
+            {
+                currentIndex = i+1;
+                return commands[i].Args.ToArray()[0];
+            }
+            
+            if (commands[i].Number == CommandNumber.SITUATION)
+            {
+                currentIndex = i+1;
                 return commands[i].Args.ToArray()[0];
             }
         }
@@ -284,20 +343,15 @@ public static class StoryPretranslationPatch
             return "";
         }*/
 
-        if (nextInteraction == startIndex)
+        if (nextTranslatable == startIndex)
         {
-            return GetNextStringToTranslate(commands, nextInteraction + 1);
+            return GetNextStringToTranslate(commands, nextTranslatable + 1, ref currentIndex);
         }
-        
-        if (nextInteraction == -1)
-        {
-            return "";
-        }
-        
-        return GetPrintTextBetween(commands, startIndex, nextInteraction);
+
+        return GetPrintTextBetween(commands, startIndex, nextTranslatable);
     }
     
-    internal static int GetNextInteractionIndex(CommandStruct[] commands, int index)
+    internal static int GetNextTranslatableIndex(CommandStruct[] commands, int index)
     {
         if (index >= commands.Length)
         {
@@ -306,7 +360,14 @@ public static class StoryPretranslationPatch
         
         for (var i = index + 1; i < commands.Length; i++)
         {
-            if (commands[i].Number == CommandNumber.TOUCH || commands[i].Number == CommandNumber.TOUCH_TO_START || commands[i].Number == CommandNumber.CHOICE)
+            if (
+                commands[i].Number == CommandNumber.TOUCH || 
+                commands[i].Number == CommandNumber.TOUCH_TO_START ||
+                commands[i].Number == CommandNumber.CHOICE ||
+                commands[i].Number == CommandNumber.TITLE ||
+                commands[i].Number == CommandNumber.OUTLINE ||
+                commands[i].Number == CommandNumber.SITUATION
+                )
             {
                 return i;
             }
@@ -338,6 +399,108 @@ public static class StoryPretranslationPatch
 }
 
 /**
+ * Pretranslate story text in the background to remove the MTL delay.
+ */
+[HarmonyPatch(typeof(TutorialStoryManager), nameof(TutorialStoryManager.StartStory))]
+[HarmonyWrapSafe]
+public static class TutorialStoryPretranslationPatch
+{
+    private static int currentTranslationIndex;
+
+    public static void Postfix(TutorialStoryManager __instance)
+    {
+        if (StoryPretranslationPatch.PretranslationLabel == null)
+        {
+            var pretranslationGameObject = new GameObject();
+            pretranslationGameObject.transform.localPosition = new Vector3(0, -1000, 0);
+            StoryPretranslationPatch.PretranslationLabel = pretranslationGameObject.AddComponent<CustomUILabel>();
+            StoryPretranslationPatch.PretranslationLabel.name = "PriconneTLFixupStoryPretranslationLabel";
+            UnityEngine.Object.DontDestroyOnLoad(StoryPretranslationPatch.PretranslationLabel);
+            Log.Info("Created story pre-translation label");
+        }
+
+        currentTranslationIndex = 0;
+
+        CoroutineStarter.Instance.StartCoroutine(PretranslationCoroutine(__instance).WrapToIl2Cpp());
+    }
+
+    internal static IEnumerator PretranslationCoroutine(TutorialStoryManager manager)
+    {
+        var commands = manager.storyCommandList?.ToArray();
+        if (commands == null)
+        {
+            Log.Error("Story command list is null");
+            yield return null;
+        }
+
+        const int stallTime = 4000;
+        Log.Debug("Starting pretranslation of tutorial story");
+        yield return null;
+
+        var currentText = "";
+        var lastUpdate = DateTime.Now.Ticks / TimeSpan.TicksPerMillisecond;
+        while (StoryPretranslationPatch.PretranslationLabel != null && manager != null && !manager.IsEndStory)
+        {
+            //If there is no more text, stop pretranslation
+            if (currentTranslationIndex >= commands!.Length - 1)
+            {
+                yield return null;
+                break;
+            }
+
+            //Wait for XUAT to translate and update the label before continuing. If not updated within stallTime, continue anyway.
+            if (currentText != "" && currentText == StoryPretranslationPatch.PretranslationLabel.text &&
+                ((DateTime.Now.Ticks / TimeSpan.TicksPerMillisecond) - lastUpdate) < stallTime)
+            {
+                yield return null;
+                continue;
+            }
+
+            //Advance the current translation index if the story has progressed beyond it
+            if (manager.currentCommandIndex > currentTranslationIndex && currentTranslationIndex > 10)
+            {
+                Log.Debug("Advancing story pretranslation index to " + (manager.currentCommandIndex + 1));
+                currentTranslationIndex = manager.currentCommandIndex + 1;
+            }
+
+            //Load the next story line
+            var text = StoryPretranslationPatch.GetNextStringToTranslate(commands, currentTranslationIndex, ref currentTranslationIndex);
+            text = StoryPretranslationPatch.ReplacePlayerName(text);
+            text = StoryColorRemovalPatch.ColorCodeRegex.Replace(text, "");
+
+            lastUpdate = DateTime.Now.Ticks / TimeSpan.TicksPerMillisecond;
+            currentText = text;
+            StoryPretranslationPatch.PretranslationLabel.SetText(currentText);
+            //Log.Debug("Pretranslating: " + currentText);
+
+            //rate limit sub translation requests
+            yield return new WaitForSecondsRealtime(Util.GetTranslationDelayInSeconds().HasValue
+                ? Util.GetTranslationDelayInSeconds()!.Value
+                : 2.5f);
+        }
+
+        Log.Debug(
+            $"Tutorial story pretranslation finished (Index: {currentTranslationIndex} - Loop condition: {StoryPretranslationPatch.PretranslationLabel != null && manager != null && !manager.IsEndStory} - label null: " +
+            (StoryPretranslationPatch.PretranslationLabel == null) + ", manager null: " + (manager == null) + ", story ended: " +
+            (manager?.IsEndStory) + ")");
+        if (StoryPretranslationPatch.PretranslationLabel != null)
+        {
+            StoryPretranslationPatch.PretranslationLabel.SetText("");
+        }
+    }
+}
+
+[HarmonyPatch(typeof(StoryChoiceController), nameof(StoryChoiceController.OpenChoiceButton))]
+[HarmonyWrapSafe]
+public static class StoryChoiceControllerPatch
+{
+    public static void Prefix(ref string _labelText)
+    {
+        _labelText = StoryColorRemovalPatch.ColorCodeRegex.Replace(_labelText, "");
+    }
+}
+
+/**
  * This patch calls FeedPage whenever possible to skip all WAIT commands and finish the typewriting effect.
  * This allows the translation endpoint to translate the entire text at once, improving speed and quality.
  */
@@ -355,7 +518,7 @@ public static class StoryManagerPatch
         }
 
         var commands = __instance.storyCommandList.ToArray();
-        Log.Debug("Command ["+_index+"]: " + commands[_index].Number + " - Args: " + string.Join(", ", commands[_index].Args.ToArray()));
+        //Log.Debug("Command ["+_index+"]: " + commands[_index].Number + " - Args: " + string.Join(", ", commands[_index].Args.ToArray()));
         var currentCommand = commands[_index];
         if (currentCommand.Number == CommandNumber.PRINT)
         {
