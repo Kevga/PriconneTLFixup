@@ -142,6 +142,16 @@ public class StoryColorRemovalPatch
     }
 }
 
+[HarmonyPatch(typeof(StoryLogContainer), nameof(StoryLogContainer.SetupLogData))]
+[HarmonyWrapSafe]
+public class StoryLogColorPatch
+{
+    public static void Prefix(ref StoryLogInfo _logInfo)
+    {
+        _logInfo.Text = StoryColorRemovalPatch.ColorCodeRegex.Replace(_logInfo.Text, "");
+    }
+}
+
 
 /**
  * Pretranslate story text in the background to remove the MTL delay.
