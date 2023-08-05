@@ -181,3 +181,33 @@ public class UnitIconPatch
         }
     }
 }
+
+[HarmonyPatch(typeof(PartsProfileCard), nameof(PartsProfileCard.Initialize))]
+[HarmonyWrapSafe]
+public class ProfileCardPatch
+{
+    public static void Postfix(PartsProfileCard __instance)
+    {
+        var labelGo =
+            GameObject.Find(
+                    "_Game(Clone)/UI Root/ViewsArea/View/ViewMyProfileCard(Clone)/TopProfileImage/MyProfileCard/ProfileLayer/ProfileNode/Profile/Tower/ReachingFloor/common_dt_bg_pink/Label");
+        if (!labelGo)
+        {
+            Log.Debug("Profile tower label GO not found");
+            return;
+        }
+        
+        var label = labelGo.GetComponent<CustomUILabel>();
+        if (!label)
+        {
+            Log.Debug("Profile tower label not found");
+            return;
+        }
+
+        label.lineWidth = 180;
+        var pos = labelGo.transform.localPosition;
+        pos.x = 3.4f;
+        labelGo.transform.localPosition = pos;
+        Log.Debug("Fixed profile tower label");
+    }
+}
