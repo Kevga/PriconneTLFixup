@@ -4,7 +4,7 @@ using XUnity.AutoTranslator.Plugin.Core;
 
 namespace PriconneTLFixup;
 
-[BepInPlugin("PriconneTLFixup", "PriconneTLFixup by Dakari", "1.3.0-beta1")]
+[BepInPlugin("PriconneTLFixup", "PriconneTLFixup by Dakari", "1.3.0")]
 [BepInProcess("PrincessConnectReDive.exe")]
 public class Plugin: BasePlugin
 {

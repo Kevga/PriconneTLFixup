@@ -13,6 +13,6 @@ $updatedPluginClassContent = [regex]::Replace($pluginClassContent, $pluginClassR
     $id = $match.Groups['id'].Value
     $name = $match.Groups['name'].Value
     "[BepInPlugin(`"$id`", `"$name`", `"$version`")]"  # Note the use of backticks to escape double quotes
-})
+}).TrimEnd()
 # Save the updated content back to the plugin class file
 $updatedPluginClassContent | Set-Content $pluginClassPath

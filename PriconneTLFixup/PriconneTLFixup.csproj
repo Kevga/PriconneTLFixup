@@ -2,7 +2,7 @@
 
     <PropertyGroup>
         <Authors>Dakari</Authors>
-        <Version>1.3.0-beta1</Version>
+        <Version>1.3.0</Version>
         <Copyright>Dakari</Copyright>
         <Description>Fixes issues in Priconne that get caused by XUAT</Description>
         <TargetFramework>net6.0</TargetFramework>
@@ -152,18 +152,18 @@
     </ItemGroup>
 
     <ItemGroup>
-        <PackageReference Include="Fastenshtein" Version="1.0.0.8"/>
-        <PackageReference Include="BepInEx.AssemblyPublicizer.MSBuild" Version="0.4.1" PrivateAssets="all"/>
+        <PackageReference Include="Fastenshtein" Version="1.0.0.8" />
+        <PackageReference Include="BepInEx.AssemblyPublicizer.MSBuild" Version="0.4.1" PrivateAssets="all" />
     </ItemGroup>
 
     <Target Name="CopyToGameDir" AfterTargets="AfterBuild">
-        <Message Text="Copying $(OutDir)$(AssemblyName).dll to game folder" Importance="high"/>
-        <Copy SourceFiles="$(OutDir)$(AssemblyName).dll" DestinationFiles="$(GameDir)\BepInEx\plugins\$(AssemblyName).dll"/>
-        <Copy SourceFiles="$(OutDir)$(AssemblyName).pdb" DestinationFiles="$(GameDir)\BepInEx\plugins\$(AssemblyName).pdb"/>
+        <Message Text="Copying $(OutDir)$(AssemblyName).dll to game folder" Importance="high" />
+        <Copy SourceFiles="$(OutDir)$(AssemblyName).dll" DestinationFiles="$(GameDir)\BepInEx\plugins\$(AssemblyName).dll" />
+        <Copy SourceFiles="$(OutDir)$(AssemblyName).pdb" DestinationFiles="$(GameDir)\BepInEx\plugins\$(AssemblyName).pdb" />
     </Target>
 
     <Target Name="PreBuild" BeforeTargets="PreBuildEvent">
-        <Exec Command="powershell -ExecutionPolicy Bypass -File UpdateVersion.ps1"/>
+        <Exec Command="powershell -ExecutionPolicy Bypass -File UpdateVersion.ps1" />
     </Target>
 
 
