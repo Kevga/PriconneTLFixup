@@ -13,6 +13,8 @@ public class Plugin: BasePlugin
     
     public override void Load()
     {
+        PriconneTLFixup.Log.BieLogger = Log;
+        
         try
         {
             Console.OutputEncoding = System.Text.Encoding.UTF8;
@@ -23,7 +25,6 @@ public class Plugin: BasePlugin
             PriconneTLFixup.Log.Error(e);
         }
 
-        PriconneTLFixup.Log.BieLogger = Log;
         _harmonyController.PatchAll();
         PriconneTLFixup.Log.Info("PriconneTLFixup loaded!");
         PriconneTLFixup.Log.Info("If you want to contribute to this project, please visit:");

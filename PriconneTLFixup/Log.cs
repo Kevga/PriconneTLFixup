@@ -6,7 +6,7 @@ namespace PriconneTLFixup;
 
 public class Log
 {
-    internal static ManualLogSource BieLogger = null!;
+    internal static ManualLogSource? BieLogger;
 
 #if DEBUG
     private static void _Log(string message, LogLevel logLevel, string filePath, string member, int line)
@@ -44,7 +44,7 @@ public class Log
 #else
 		private static void _Log(string message, LogLevel logLevel)
 		{
-            BieLogger.Log(logLevel, message);
+            BieLogger?.Log(logLevel, message);
 		}
 
 		public static void Debug(string message, bool evenInReleaseBuild)
@@ -70,27 +70,27 @@ public class Log
     [Conditional("DEBUG")]
     public static void Debug(Exception exception)
     {
-        BieLogger.Log(LogLevel.Debug, exception);
+        BieLogger?.Log(LogLevel.Debug, exception);
     }
 
     [Conditional("DEBUG")]
     public static void Debug(string message)
     {
-        BieLogger.Log(LogLevel.Debug, message);
+        BieLogger?.Log(LogLevel.Debug, message);
     }
 
     public static void Info(Exception exception)
     {
-        BieLogger.Log(LogLevel.Info, exception);
+        BieLogger?.Log(LogLevel.Info, exception);
     }
 
     public static void Warn(Exception exception)
     {
-        BieLogger.Log(LogLevel.Warning, exception);
+        BieLogger?.Log(LogLevel.Warning, exception);
     }
 
     public static void Error(Exception exception)
     {
-        BieLogger.Log(LogLevel.Error, exception);
+        BieLogger?.Log(LogLevel.Error, exception);
     }
 }
