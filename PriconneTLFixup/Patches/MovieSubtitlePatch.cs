@@ -108,10 +108,10 @@ public class SubtitlePretranslationPatch
             i++;
             
             //rate limit sub translation requests
-            yield return new WaitForSecondsRealtime(Util.GetTranslationDelayInSeconds()); 
+            yield return new WaitForSecondsRealtime(Util.GetTranslationDelayInSeconds().HasValue ? Util.GetTranslationDelayInSeconds()!.Value : 2.5f); 
         }
         
-        Log.Debug("Pretranslation finished");
+        Log.Debug("Subtitle pretranslation finished");
         if (PretranslationLabel != null)
         {
             PretranslationLabel.SetText("");
