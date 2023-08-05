@@ -4,8 +4,9 @@ Fixes a couple issues when using XUAT with Priconne, as well as adding QoL featu
 
 ## Features
 - **Removes the typewriter effect** from all dialog, improving the speed and accuracy of the translation.
+- Enables you to **search units by their English name** in the unit list.
 - **Adds subtitles to all movies**, even if you downloaded them with audio. Usually they only show up if you download without voices.
-- **Translates subtitles before they are displayed**, so you don't have to wait for the translation to happen.
+- **Translates subtitles and story before they are displayed**, so you don't have to wait for the translation to happen.
 - **Adds number separators** to most large numbers in the game, removing the need to count endless zeroes.
 - Allows you to **resize the game window to any size**, instead of being limited to 720p. Also enables the maximize button.
 - Automatically **closes the Sugoi translation backend terminal window** when you close the game, should you use that.
