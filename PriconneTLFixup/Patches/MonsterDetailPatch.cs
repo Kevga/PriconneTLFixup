@@ -57,14 +57,18 @@ public class MonsterDetailOverflowPatch
     private static IEnumerator UpdateDetailTextPlate(PartsMonsterDetailTextPlate textPlate)
     {
         var text = "";
+        var separators = new[] {"・", "·"};
         while (textPlate.detailText != null)
         {
             if (textPlate.detailText.text != text)
             {
                 Log.Debug("Updating PartsMonsterDetailTextPlate text");
                 var updatedText = textPlate.detailText.text;
-                updatedText = updatedText.Replace("・", "\n\n・");
-                updatedText = updatedText.Replace("\n\n\n・", "\n\n・");
+                foreach (var separator in separators)
+                {
+                    updatedText = updatedText.Replace(separator, "\n\n" + separator);
+                    updatedText = updatedText.Replace("\n\n\n" + separator, "\n\n" + separator);
+                }
                 textPlate.detailText.text = updatedText;
                 text = updatedText;
                 yield return null;
