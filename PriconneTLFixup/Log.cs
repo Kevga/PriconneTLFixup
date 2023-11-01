@@ -15,7 +15,7 @@ public class Log
         var className = pathParts[^1].Replace(".cs", "");
         var caller = new StackFrame(3, true).GetMethod()?.Name;
         var prefix = $"[{caller}->{className}.{member}:{line}]: ";
-        BieLogger.Log(logLevel, $"{prefix}{message}");
+        BieLogger?.Log(logLevel, $"{prefix}{message}");
     }
 
     public static void Debug(string message, [CallerFilePath] string filePath = "",
