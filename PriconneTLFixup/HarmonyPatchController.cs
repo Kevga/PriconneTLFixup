@@ -7,27 +7,33 @@ public class HarmonyPatchController
 {
     private Dictionary<Type, PatchClassProcessor>? _patchClassProcessorList;
     private Harmony _harmonyInstance = null!;
-    private const string HarmonyID = "com.github.kevga.priconnetlfixup";
+    private readonly string _harmonyID;
+    private readonly string _namespacePrefix;
 
+    public HarmonyPatchController(string harmonyId, string namespacePrefix)
+    {
+        _harmonyID = harmonyId;
+        _namespacePrefix = namespacePrefix;
+    }
+    
     private void InitPatches()
     {
-        _harmonyInstance = new Harmony(HarmonyID);
+        _harmonyInstance = new Harmony(_harmonyID);
 
         _patchClassProcessorList = new Dictionary<Type, PatchClassProcessor>();
         AccessTools.GetTypesFromAssembly(Assembly.GetExecutingAssembly()).Do<Type>(type =>
             {
-                if (type.FullName?.StartsWith("PriconneTLFixup.Patches") ?? false)
+                if (!(type.FullName?.StartsWith(_namespacePrefix) ?? false) ||
+                    (type.FullName?.Contains("+<") ?? true)) return;
+                
+                try
                 {
-                    try
-                    {
-                        Log.Debug("Creating class processor for " + type.FullName);
-                        _patchClassProcessorList.Add(type, _harmonyInstance.CreateClassProcessor(type));  
-                    } catch (Exception e)
-                    {
-                        Log.Error("Failed to create class processor for " + type.FullName);
-                        Log.Error(e);
-                    }
-                    
+                    Log.Debug("Creating class processor for " + type.FullName);
+                    _patchClassProcessorList.Add(type, _harmonyInstance.CreateClassProcessor(type));  
+                } catch (Exception e)
+                {
+                    Log.Error("Failed to create class processor for " + type.FullName);
+                    Log.Error(e);
                 }
             }
         );

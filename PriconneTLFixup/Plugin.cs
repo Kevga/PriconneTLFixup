@@ -8,7 +8,7 @@ namespace PriconneTLFixup;
 [BepInProcess("PrincessConnectReDive.exe")]
 public class Plugin: BasePlugin
 {
-    private readonly HarmonyPatchController _harmonyController = new();
+    private readonly HarmonyPatchController _harmonyController = new("com.github.kevga.priconnetlfixup", "PriconneTLFixup.Patches");
     internal static AutoTranslationPlugin AutoTranslatorPlugin = null!;
     
     public override void Load()
