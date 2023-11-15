@@ -42,6 +42,16 @@ public class MaximizePatch
     }
 }
 
+[HarmonyPatch(typeof(UILabel), nameof(UILabel.keepCrisp), MethodType.Getter)]
+public class UILabelCrispnessPatch
+{
+    public static bool Prefix(ref bool __result)
+    {
+        __result = true;
+        return false;
+    }
+}
+
 [HarmonyPatch(typeof(HeaderController), nameof(HeaderController.RestoreSlideIn))]
 public class HeaderPatch
 {
