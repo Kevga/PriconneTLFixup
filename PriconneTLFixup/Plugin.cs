@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using BepInEx;
 using BepInEx.Unity.IL2CPP;
 using XUnity.AutoTranslator.Plugin.Core;
@@ -21,11 +22,15 @@ public class Plugin: BasePlugin
         } 
         catch (Exception e)
         {
-            PriconneTLFixup.Log.Error("Failed to set console encoding to UTF8. Japanese characters may not display correctly.");
-            PriconneTLFixup.Log.Error(e);
+            PriconneTLFixup.Log.Warn("Failed to set console encoding to UTF8. Japanese characters may not display correctly.");
+            PriconneTLFixup.Log.Warn(e);
         }
 
+        var sw = Stopwatch.StartNew();
         _harmonyController.PatchAll();
+        sw.Stop();
+        PriconneTLFixup.Log.Debug($"Patching took {sw.ElapsedMilliseconds}ms");
+        
         PriconneTLFixup.Log.Info("PriconneTLFixup loaded!");
         PriconneTLFixup.Log.Info("If you want to contribute to this project, please visit:");
         PriconneTLFixup.Log.Info("https://github.com/Kevga/PriconneTLFixup");

@@ -22,7 +22,8 @@ public class SugoiExitPatch2
 {
     public static void Prefix()
     {
-        Log.Info("Toolbox.ApplicationQuit");
+        Log.Info("Application quitting");
         SugoiExitPatch.process?.Kill();
+        SugoiExitPatch.process = null;
     }
 }

@@ -6,6 +6,8 @@ namespace PriconneTLFixup;
 public class CoroutineStarter : MonoBehaviour
 {
     private static CoroutineStarter? _instance;
+    public static Action? OnUpdate;
+    public static Action? OnInit;
 
     public static CoroutineStarter Instance
     {
@@ -19,10 +21,16 @@ public class CoroutineStarter : MonoBehaviour
                 _instance = gameObject.AddComponent<CoroutineStarter>();
                 gameObject.name = typeof(CoroutineStarter).ToString();
                 DontDestroyOnLoad(gameObject);
+                OnInit?.Invoke();
             }
 
             var result = _instance;
             return result;
         }
+    }
+    
+    public void Update()
+    {
+        OnUpdate?.Invoke();
     }
 }

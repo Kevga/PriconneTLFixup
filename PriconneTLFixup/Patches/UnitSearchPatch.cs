@@ -15,6 +15,12 @@ public class DictPatch
 
     public static void Prepare()
     {
+        //For some reason Prepare is called twice
+        if (NameDict.Count > 0)
+        {
+            return;
+        }
+        
         ReadUnitNameFile();
         Log.Info("Loaded names for " + NameDict.Count + " characters.");
     }
