@@ -232,3 +232,54 @@ public class ProfileCardPatch
         Log.Debug("Fixed profile tower label");
     }
 }
+[HarmonyPatch(typeof(PartsGoldShopPlate), nameof(PartsGoldShopPlate.SetUseJewel))]
+[HarmonyWrapSafe]
+public class GoldShopPlatePatch
+{
+    public static void Postfix(PartsGoldShopPlate __instance)
+    {
+        var label = __instance.useJewelTypeLabel;
+        label.overflowMethod = UILabel.Overflow.ResizeFreely;
+    }
+}
+
+[HarmonyPatch(typeof(PartsClanBattleRankingSelf), nameof(PartsClanBattleRankingSelf.SetData))]
+[HarmonyWrapSafe]
+public class ClanBattleRankingPatch
+{
+    public static void Postfix(PartsClanBattleRankingSelf __instance)
+    {
+        var label = __instance.clanTotalDamage;
+        label.lineWidth = 180;
+    }
+}
+
+//PartsEquipmentDetail.SetItemId
+[HarmonyPatch(typeof(PartsEquipmentDetail), nameof(PartsEquipmentDetail.setInfoStatusAndUI))]
+[HarmonyWrapSafe]
+public class EquipmentDetailPatch
+{
+    public static void Postfix(PartsEquipmentDetail __instance)
+    {
+        var labelGos = __instance.gameObject.transform.GetComponentsInChildren<CustomUILabel>();
+        if (labelGos == null)
+        {
+            return;
+        }
+
+        var labelArr = labelGos.ToArray();
+        for (var i = 0; i < labelArr.Length; i++)
+        {
+            var label = labelArr[i];
+            if (label == null)
+            {
+                continue;
+            }
+            
+            if (label.curTextId == eTextId.EQUIP_STATUS_LABEL || label.text == "Equipment Stats")
+            {
+                label.overflowMethod = UILabel.Overflow.ResizeFreely;
+            }
+        }
+    }
+}
