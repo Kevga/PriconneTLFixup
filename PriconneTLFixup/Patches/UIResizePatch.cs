@@ -35,6 +35,27 @@ public class SettingsButtonPatch
     }
 }
 
+[HarmonyPatch(typeof(StoryScene), nameof(StoryScene.ViewPlaceName))]
+[HarmonyPriority(Priority.VeryLow)]
+[HarmonyWrapSafe]
+public class StoryPlaceNamePatch2
+{
+    public static bool Prefix(StoryScene __instance, string _placeName)
+    {
+        var storyIcon = __instance.placeIcon;
+        storyIcon.placeObjAnimation.enabled = false;
+        storyIcon.placeHeaderLabel.gameObject.SetActive(false);
+        storyIcon.placeSubLabel.SetText(_placeName);
+        var transform = storyIcon.placeSubLabel.transform;
+        var pos = transform.localPosition;
+        pos.x = 40;
+        transform.localPosition = pos;
+        storyIcon.lineSprite.width = 83 + storyIcon.placeSubLabel.width;
+        storyIcon.StartAnimation();
+        return false;
+    }
+}
+
 /**
  * Header underline length is determined by assuming a certain character width that works for CJK characters.
  * For the latin alphabet, we instead first set the text and then calculate the actual width of that label.
