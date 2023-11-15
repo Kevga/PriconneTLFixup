@@ -2,7 +2,7 @@
 
     <PropertyGroup>
         <Authors>Dakari</Authors>
-        <Version>1.3.0</Version>
+        <Version>1.4.0</Version>
         <Copyright>Dakari</Copyright>
         <Description>Fixes issues in Priconne that get caused by XUAT</Description>
         <TargetFramework>net6.0</TargetFramework>

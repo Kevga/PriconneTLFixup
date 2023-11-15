@@ -169,7 +169,6 @@ public class WidgetPatch
             return;
         }
 
-        //TODO: Make Atlases a dictionary with name as key to speed this up
         AtlasInitPatch.Atlases.TryGetValue(__instance.atlas.name, out var replacementAtlas);
         if (replacementAtlas == null)
         {
