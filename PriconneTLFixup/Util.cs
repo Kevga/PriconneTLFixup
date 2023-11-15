@@ -1,13 +1,34 @@
-﻿using Il2CppSystem.Text;
+﻿using System.Text.RegularExpressions;
+using Il2CppSystem.Text;
 using UnityEngine;
 
 namespace PriconneTLFixup;
 
 public static class Util
 {
+    public static readonly Regex ColorCodeRemovalRegex = new(@"\[[^\]]+\]/g", RegexOptions.Compiled);
     public static float? GetTranslationDelayInSeconds()
     {
         return Plugin.AutoTranslatorPlugin.TranslationManager?.CurrentEndpoint?.TranslationDelay;
+    }
+    
+    public static string RemoveColorCodes(this string _value)
+    {
+        return ColorCodeRemovalRegex.Replace(_value, "");
+    }
+    
+    public static string ReplaceNewLineWithString(this string _value, string _replaceString)
+    {
+        if (_value.Contains("/\\n"))
+        {
+            return _value.Replace("/\\n", _replaceString);
+        }
+        
+        if (_value.Contains("\\n"))
+        {
+            return _value.Replace("\\n", _replaceString);
+        }
+        return _value;
     }
     
     public static string GetPath( this object obj )
