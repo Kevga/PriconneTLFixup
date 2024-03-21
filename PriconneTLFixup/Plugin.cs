@@ -5,12 +5,12 @@ using XUnity.AutoTranslator.Plugin.Core;
 
 namespace PriconneTLFixup;
 
-[BepInPlugin("PriconneTLFixup", "PriconneTLFixup by Dakari", "1.4.0")]
+[BepInPlugin("PriconneTLFixup", "PriconneTLFixup by Dakari", "1.4.3")]
 [BepInProcess("PrincessConnectReDive.exe")]
 public class Plugin: BasePlugin
 {
     private readonly HarmonyPatchController _harmonyController = new("com.github.kevga.priconnetlfixup", "PriconneTLFixup.Patches");
-    internal static AutoTranslationPlugin AutoTranslatorPlugin = null!;
+    internal static AutoTranslationPlugin? AutoTranslatorPlugin;
     
     public override void Load()
     {
