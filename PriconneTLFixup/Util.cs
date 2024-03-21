@@ -9,7 +9,12 @@ public static class Util
     public static readonly Regex ColorCodeRemovalRegex = new(@"\[[^\]]+\]/g", RegexOptions.Compiled);
     public static float? GetTranslationDelayInSeconds()
     {
-        return Plugin.AutoTranslatorPlugin.TranslationManager?.CurrentEndpoint?.TranslationDelay;
+        return Plugin.AutoTranslatorPlugin?.TranslationManager?.CurrentEndpoint?.TranslationDelay;
+    }
+    
+    public static bool IsTranslationEnabled()
+    {
+        return Plugin.AutoTranslatorPlugin?._isInTranslatedMode ?? false;
     }
     
     public static string RemoveColorCodes(this string _value)

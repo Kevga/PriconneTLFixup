@@ -26,6 +26,11 @@ public class ThousandsSeperatorSoloNumberPatch
     
     public static void Prefix(UILabel __instance, ref string value)
     {
+        if (!Settings.EnableLargeNumberSeparators.Value || !Util.IsTranslationEnabled())
+        {
+            return;
+        }
+        
         if (value == null || __instance == null)
         {
             return;
@@ -97,6 +102,11 @@ public class ThousandsSeperatorPostTranslationPatch
 
     public static void Prefix(ref string text)
     {
+        if (!Settings.EnableLargeNumberSeparators.Value || !Util.IsTranslationEnabled())
+        {
+            return;
+        }
+        
         if (text == null)
         {
             return;
@@ -140,6 +150,11 @@ public class ThousandsSeperatorDictionary32Patch
     
     public static void Postfix(ref string __result, int value, Il2CppSystem.ReadOnlySpan<char> format)
     {
+        if (!Settings.EnableLargeNumberSeparators.Value || !Util.IsTranslationEnabled())
+        {
+            return;
+        }
+        
         if (__result == null || format.Length > 0)
         {
             return;
@@ -176,6 +191,11 @@ public class ThousandsSeperatorDictionary64Patch
 {
     public static void Postfix(ref string __result, long value, Il2CppSystem.ReadOnlySpan<char> format)
     {
+        if (!Settings.EnableLargeNumberSeparators.Value || !Util.IsTranslationEnabled())
+        {
+            return;
+        }
+        
         if (__result == null || format.Length > 0)
         {
             return;
@@ -192,6 +212,11 @@ public class ThousandsSeperatorDictionaryCustomUILabelPatch
     internal static readonly Dictionary<CustomUILabel, long> NumberDictionary = new();
     public static void Prefix(CustomUILabel __instance, Il2CppReferenceArray<Il2CppSystem.Object> _args)
     {
+        if (!Settings.EnableLargeNumberSeparators.Value || !Util.IsTranslationEnabled())
+        {
+            return;
+        }
+        
         if (_args.Length == 0)
         {
             return;
@@ -220,6 +245,11 @@ public class ThousandsSeperatorDictionaryCustomUILabelPatch
 
     public static void Postfix(CustomUILabel __instance, Il2CppReferenceArray<Il2CppSystem.Object> _args)
     {
+        if (!Settings.EnableLargeNumberSeparators.Value || !Util.IsTranslationEnabled())
+        {
+            return;
+        }
+        
         var exists = NumberDictionary.TryGetValue(__instance, out var value);
         if (!exists)
         {

@@ -15,6 +15,7 @@ public class Plugin: BasePlugin
     public override void Load()
     {
         PriconneTLFixup.Log.BieLogger = Log;
+        Settings.Init(Config);
         
         try
         {
