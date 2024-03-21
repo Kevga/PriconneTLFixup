@@ -63,7 +63,8 @@ public class TitleTextPatch
         __instance.gameObject.SetActive(false);
         __instance.gameObject.SetActive(true);
         __instance.titleLabel.SetText("");
-        __instance.titleLabel2nd.SetText(_setTitleText);
+        __instance.titleLabel2nd.SetText(_setTitleText.Replace("\n", " ").Replace("  ", " "));
+        __instance.titleLabel2nd.SetText( __instance.titleLabel2nd.text.Replace("\n", " ").Replace("  ", " "));
         __instance.titleLabel.SetActive(false);
         __instance.titleLabel2nd.SetActive(false);
         __instance.titleLabel.SetActive(true);
