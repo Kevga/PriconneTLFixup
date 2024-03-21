@@ -9,19 +9,6 @@ using UnityEngine;
 namespace PriconneTLFixup.Patches;
 
 /**
- * The Grotto button text is much smaller than the surrounding ones. Scale it up to match.
- */
-[HarmonyPatch(typeof(ViewQuestTop), nameof(ViewQuestTop.StartView))]
-[HarmonyWrapSafe]
-public class GrottoButtonPatch
-{
-    public static void Postfix(ViewQuestTop __instance)
-    {
-        __instance.buttonSpecialQuest.Button.GetChildUILabel().lineWidth = 95;
-    }
-}
-
-/**
  * Same with the settings button.
  */
 [HarmonyPatch(typeof(ViewMenuTop), nameof(ViewMenuTop.StartView))]
