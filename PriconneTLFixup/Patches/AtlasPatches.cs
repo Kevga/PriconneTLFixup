@@ -1,16 +1,9 @@
 ﻿using System.Diagnostics;
-using System.Reflection;
 using System.Text.RegularExpressions;
 using BepInEx;
 using Cute;
-using Elements;
 using HarmonyLib;
-using Il2CppInterop.Runtime.Runtime;
-using Spine;
 using UnityEngine;
-using UnityEngine.Experimental.Rendering;
-using XUnity.AutoTranslator.Plugin.Core;
-using Random = UnityEngine.Random;
 
 namespace PriconneTLFixup.Patches;
 
@@ -22,6 +15,7 @@ public class AtlasInitPatch
         Path.Join(Paths.BepInExRootPath, "Translation", "en", "Other", "atlases");
 
     public static readonly Dictionary<string, UIAtlas> Atlases = new();
+    public static readonly Dictionary<string, UIAtlas> OriginalAtlases = new();
     internal const string NameSuffix = " (Fixup)";
 
     public static void Postfix()
@@ -177,11 +171,57 @@ public class WidgetPatch
 
         if (replacementAtlas.GetSprite(__instance.mSpriteName) != null)
         {
-            __instance.atlas = replacementAtlas;
+            if (!AtlasInitPatch.OriginalAtlases.ContainsKey(__instance.atlas.name)) 
+            {
+                AtlasInitPatch.OriginalAtlases.Add(__instance.atlas.name, __instance.atlas);
+            }
+            
+            __instance.mAtlas = replacementAtlas;
         }
         else
         {
             Log.Warn($"Sprite {__instance.mSpriteName} not found in atlas {replacementAtlas.name}");
+        }
+    }
+}
+
+[HarmonyPatch(typeof(UISprite), nameof(UISprite.spriteName), MethodType.Setter)]
+[HarmonyWrapSafe]
+public class SpriteNameUpdatePatch
+{
+    public static void Prefix(UISprite __instance, string value)
+    {
+        if (__instance.atlas == null)
+        {
+            return;
+        }
+
+        AtlasInitPatch.Atlases.TryGetValue(__instance.atlas.name.Replace(AtlasInitPatch.NameSuffix, ""), out var replacementAtlas);
+        if (replacementAtlas == null)
+        {
+            return;
+        }
+
+        if (replacementAtlas.GetSprite(value) != null)
+        {
+            if (__instance.atlas.name != replacementAtlas.name)
+            {
+                __instance.mAtlas = replacementAtlas; 
+            }
+        }
+        else if (__instance.atlas.name.Contains(AtlasInitPatch.NameSuffix))
+        {
+            Log.Debug($"Sprite {value} not found in atlas {replacementAtlas.name}");
+            var originalAtlas = AtlasInitPatch.OriginalAtlases.GetValueOrDefault(__instance.atlas.name.Replace(AtlasInitPatch.NameSuffix, ""));
+            if (originalAtlas != null)
+            {
+                __instance.mAtlas = originalAtlas.GetComponent<UIAtlas>();
+                Log.Debug("Reverting to original atlas");
+            }
+            else
+            {
+                Log.Warn($"Original atlas {__instance.atlas.name.Replace(AtlasInitPatch.NameSuffix, "")} not found");
+            }
         }
     }
 }
@@ -244,13 +284,13 @@ public class AtlasDumpPatch
         {
             return;
         }
-
-        if (DumpedAtlases.Contains(atlas.name) || AtlasInitPatch.Atlases.ContainsValue(atlas) || atlas.name.Contains(AtlasInitPatch.NameSuffix))
+        
+        if (!XUnity.AutoTranslator.Plugin.Core.Configuration.Settings.EnableTextureDumping)
         {
             return;
         }
 
-        if (!XUnity.AutoTranslator.Plugin.Core.Configuration.Settings.EnableTextureDumping)
+        if (DumpedAtlases.Contains(atlas.name) || AtlasInitPatch.Atlases.ContainsValue(atlas) || atlas.name.Contains(AtlasInitPatch.NameSuffix))
         {
             return;
         }
