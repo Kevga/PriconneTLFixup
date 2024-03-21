@@ -1,9 +1,6 @@
-using System.Collections;
 using BepInEx;
-using Cute;
 using Elements;
 using HarmonyLib;
-using PriconneTLFixup;
 
 namespace PriconneTLFixup.Patches;
 
@@ -36,6 +33,12 @@ public class DictPatch
         }
 
         var lowerCaseInput = _filter.ToLower();
+        if (lowerCaseInput == "fav")
+        {
+            __result = IsFavorited(_source);
+            return false;
+        }
+        
         var match = false;
         for (var i = 0; i < enSpellings.Length; i++)
         {
@@ -48,6 +51,20 @@ public class DictPatch
         }
        
         __result = match;
+        return false;
+    }
+    
+    private static bool IsFavorited(string unitName)
+    {
+        var unitDataDict = Singleton<UserData>.Instance.UnitParameterDictionary;
+        foreach (var unitParam in unitDataDict._values)
+        {
+            if (unitParam.MasterData.UnitName == unitName)
+            {
+                return unitParam.UniqueData.FavoriteFlag == 1; 
+            }
+        }
+
         return false;
     }
     
