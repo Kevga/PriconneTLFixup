@@ -23,6 +23,11 @@ public class UIFontPatch
 
     private static void Prefix(CustomUILabel __instance)
     {
+        if (!Settings.EnableFontReplacement.Value)
+        {
+            return;
+        }
+        
         if (!_initialized)
         {
             _baseFont = LoadFont(_baseFontName);
