@@ -23,7 +23,7 @@ public class UIFontPatch
 
     private static void Prefix(CustomUILabel __instance)
     {
-        if (!Settings.EnableFontReplacement.Value)
+        if (!Settings.EnableFontReplacement.Value || !Util.IsTranslationEnabled())
         {
             return;
         }
