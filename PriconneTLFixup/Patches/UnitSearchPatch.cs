@@ -1,6 +1,7 @@
 using BepInEx;
 using Elements;
 using HarmonyLib;
+using XUnity.AutoTranslator.Plugin.Core;
 
 namespace PriconneTLFixup.Patches;
 
@@ -8,8 +9,6 @@ namespace PriconneTLFixup.Patches;
 [HarmonyWrapSafe]
 public class DictPatch
 {
-    private static readonly string DictPath = Path.Join(Paths.BepInExRootPath, "Translation", "en", "Other", "unit_names.txt");
-
     public static void Prepare()
     {
         //For some reason Prepare is called twice
@@ -40,10 +39,16 @@ public class DictPatch
         }
         
         var match = false;
-        for (var i = 0; i < enSpellings.Length; i++)
+        foreach (var enSpelling in enSpellings)
         {
-            var enSpelling = enSpellings[i];
             if (enSpelling.ToLower().StartsWith(lowerCaseInput, true, UnitDefine.UNIT_SEARCH_REMOVE_STRING, UnitDefine.UnitNameSearchSplitString))
+            {
+                match = true;
+                break;
+                
+            } 
+            
+            if (enSpelling.ToLower().Replace(" ", "").StartsWith(lowerCaseInput.Replace(" ", ""), true, UnitDefine.UNIT_SEARCH_REMOVE_STRING, UnitDefine.UnitNameSearchSplitString))
             {
                 match = true;
                 break;
@@ -72,6 +77,9 @@ public class DictPatch
 
     private static void ReadUnitNameFile()
     {
+        var language = AutoTranslatorSettings.DestinationLanguage;
+        var DictPath = Path.Join(Paths.BepInExRootPath, "Translation", language ?? "en", "Other", "unit_names.txt");
+        
         if (!File.Exists(DictPath))
         {
             Log.Error($"Unit name dictionary file not found: {DictPath}");
@@ -96,7 +104,7 @@ public class DictPatch
 
             var enVariants = en.Split(";");
 
-            NameDict[jp] = enVariants.Where(enVariant => enVariant.Length > 0).ToArray();
+            NameDict[jp] = enVariants.Where(enVariant => enVariant.Length > 0 && enVariant.ToLower() != "christmas").ToArray();
         }
 
         file.Close();
