@@ -17,8 +17,10 @@ public class MovieDisplaySubtitlePatch
 {
     public static void Postfix(MovieManager __instance, MovieManager.MoviePlayerInfo _playerInfo)
     {
+        Log.Debug("dispSubTitle: " + _playerInfo.State);
         if (__instance.subtitle == null || !__instance.subtitle.IsShow)
         {
+            Log.Debug("dispSubTitle: Subtitle not available");
             return;
         }
         
@@ -28,26 +30,28 @@ public class MovieDisplaySubtitlePatch
     }
 }
 
-[HarmonyPatch(typeof(MovieManager), nameof(MovieManager.Load), new []{typeof(eMovieType), typeof(long), typeof(bool), typeof(Il2CppSystem.Action), typeof(bool), typeof(long), typeof(bool), typeof(bool), typeof(bool), typeof(float), typeof(float), typeof(int)})]
+[HarmonyPatch(typeof(MovieManager), nameof(MovieManager.Load), typeof(eMovieType), typeof(long), typeof(bool), typeof(Il2CppSystem.Action), typeof(bool), typeof(long), typeof(bool), typeof(bool), typeof(bool), typeof(float), typeof(float), typeof(int))]
 [HarmonyWrapSafe]
 public class MovieLoadSubtitlePatch
 {
-    public static void Prefix(MovieManager __instance, ref bool _isShowSubtitle, eMovieType _movieType)
+    public static void Prefix(MovieManager __instance, long _movieId, eMovieType _movieType)
     {
-        var movieTypesWithSubs = new HashSet<eMovieType>
+        if (__instance.subtitle != null)
         {
-            eMovieType.EVENT,
-            eMovieType.STORY,
-            eMovieType.WAC,
-            eMovieType.MAX,
-        };
-        if (!movieTypesWithSubs.Contains(_movieType))
-        {
-            return;
+            if (_movieType != eMovieType.EVENT && _movieType != eMovieType.STORY && _movieType != eMovieType.NONE)
+            {
+                Log.Info("Not showing subtitles for movie type: " + _movieType);
+                return;
+            }
+            
+            Log.Info("Showing subtitles for movie type: " + _movieType);
+            __instance.subtitle.Initialize(_movieId);
+            __instance.subtitle.IsShow = true;
         }
-        
-        Log.Debug("Showing subtitles for movie type: " + _movieType);
-        _isShowSubtitle = true;
+        else
+        {
+            Log.Debug("SubtitleManager not found");
+        }
     }
 }
 
@@ -68,7 +72,12 @@ public class SubtitlePretranslationPatch
             var pretranslationGameObject = new GameObject();
             pretranslationGameObject.transform.localPosition = new Vector3(0, -1000, 0);
             PretranslationLabel = pretranslationGameObject.AddComponent<CustomUILabel>();
+            PretranslationLabel.name = "SubtitlePretranslationLabel";
             Log.Info("Created pre-translation label");
+        }
+        else
+        {
+            Log.Debug("Pre-translation label already exists");
         }
         
         CoroutineStarter.Instance.StartCoroutine(PretranslationCoroutine(__instance).WrapToIl2Cpp());
