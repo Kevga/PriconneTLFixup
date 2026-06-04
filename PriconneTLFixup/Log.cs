@@ -8,7 +8,7 @@ public class Log
 {
     internal static ManualLogSource? BieLogger;
 
-#if DEBUG
+#if DEBUG_DISABLED
     private static void _Log(string message, LogLevel logLevel, string filePath, string member, int line)
     {
         var pathParts = filePath.Split('\\');
