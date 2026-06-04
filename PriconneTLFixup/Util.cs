@@ -22,6 +22,11 @@ public static class Util
         return ColorCodeRemovalRegex.Replace(_value, "");
     }
     
+    public static T GetEnumValueByName<T>(string name) where T : Enum
+    {
+        return (T)Enum.Parse(typeof(T), name);
+    }
+    
     public static string ReplaceNewLineWithString(this string _value, string _replaceString)
     {
         if (_value.Contains("/\\n"))
@@ -34,6 +39,25 @@ public static class Util
             return _value.Replace("\\n", _replaceString);
         }
         return _value;
+    }
+    
+    public static bool IsJapanese(this string _value)
+    {
+        return Regex.IsMatch(_value, @"\p{IsHiragana}|\p{IsKatakana}|\p{IsCJKUnifiedIdeographs}");
+    }
+
+    public static string GetRankSuffix(int rank)
+    {
+        var lastTwoDigits = rank % 100;
+        var suffix = lastTwoDigits is >= 11 and <= 13 ? "th" : (lastTwoDigits % 10) switch
+        {
+            1 => "st",
+            2 => "nd",
+            3 => "rd",
+            _ => "th"
+        };
+        
+        return suffix;
     }
     
     public static string GetPath( this object obj )
