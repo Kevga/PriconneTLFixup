@@ -96,7 +96,7 @@ public class ThousandsSeperatorSoloNumberPatch
 [HarmonyWrapSafe]
 public class ThousandsSeperatorPostTranslationPatch
 {
-    private static readonly Regex NumberRegex = new(@"\d{4,}", RegexOptions.Compiled | RegexOptions.Singleline);
+    private static readonly Regex NumberRegex = new(@"[1-9]\d{3,}", RegexOptions.Compiled | RegexOptions.Singleline);
     internal static readonly Regex DateRegex = new(@"\d{2,4}[/\.\-]\d{2}[/\.\-]\d{2,4}", RegexOptions.Compiled);
     internal static readonly CultureInfo Culture = new("en-US");
 
@@ -132,7 +132,7 @@ public class ThousandsSeperatorPostTranslationPatch
 
             if (!ThousandsSeperatorDictionary32Patch.ConvertedNumberDictionary.TryGetValue(intVal, out _))
             {
-                Log.Debug($"Could not find {intVal} in dictionary (AutoTranslationPlugin.SetText)");
+                //Log.Debug($"Could not find {intVal} in dictionary (AutoTranslationPlugin.SetText)");
                 continue;
             }
 
@@ -217,7 +217,8 @@ public class ThousandsSeperatorDictionaryCustomUILabelPatch
             return;
         }
         
-        if (_args.Length == 0)
+        // ReSharper disable once ConditionIsAlwaysTrueOrFalseAccordingToNullableAPIContract
+        if (_args == null || _args.Length == 0)
         {
             return;
         }
@@ -229,7 +230,17 @@ public class ThousandsSeperatorDictionaryCustomUILabelPatch
                 continue;
             }
             var cpptype = arg.GetIl2CppType();
+            if (cpptype == null)
+            {
+                continue;
+            }
+            
             var actualType = System.Type.GetType(cpptype.AssemblyQualifiedName);
+            if (actualType == null) 
+            {
+                continue;
+            }
+            
             if (actualType == typeof(int))
             {
                 var value = arg.Unbox<int>();
