@@ -2,7 +2,7 @@
 
     <PropertyGroup>
         <Authors>Dakari</Authors>
-        <Version>1.4.3</Version>
+        <Version>1.6.0</Version>
         <Copyright>Dakari</Copyright>
         <Description>Fixes issues in Priconne that get caused by XUAT</Description>
         <TargetFramework>net6.0</TargetFramework>
@@ -13,11 +13,14 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <Reference Include="Assembly-CSharp" Publicize="True">
-            <HintPath>$(AppData)\BepInEx\PrincessConnectReDive\interop\Assembly-CSharp.dll</HintPath>
+        <Reference Include="Assembly-CSharp">
+            <HintPath>$(GameDir)\BepInEx\interop\Assembly-CSharp.dll</HintPath>
         </Reference>
         <Reference Include="XUnity.AutoTranslator.Plugin.Core" Publicize="True">
             <HintPath>$(GameDir)\BepInEx\plugins\XUnity.AutoTranslator\XUnity.AutoTranslator.Plugin.Core.dll</HintPath>
+        </Reference>
+        <Reference Include="ExIni" Publicize="True">
+            <HintPath>$(GameDir)\BepInEx\plugins\XUnity.AutoTranslator\ExIni.dll</HintPath>
         </Reference>
         <Reference Include="XUnity.Common">
             <HintPath>$(GameDir)\BepInEx\core\XUnity.Common.dll</HintPath>
@@ -26,128 +29,122 @@
             <HintPath>$(GameDir)\BepInEx\plugins\XUnity.AutoTranslator\Translators\SugoiOfflineTranslator.dll</HintPath>
         </Reference>
         <Reference Include="0Harmony">
-            <HintPath>..\libs\0Harmony.dll</HintPath>
+            <HintPath>$(GameDir)\BepInEx\core\0Harmony.dll</HintPath>
         </Reference>
-        <Reference Include="BepInEx.Core">
-            <HintPath>..\libs\BepInEx.Core.dll</HintPath>
+        <Reference Include="BepInEx.Core"> 
+            <HintPath>$(GameDir)\BepInEx\core\BepInEx.Core.dll</HintPath> 
         </Reference>
         <Reference Include="BepInEx.Unity.IL2CPP">
-            <HintPath>..\libs\BepInEx.Unity.IL2CPP.dll</HintPath>
+            <HintPath>$(GameDir)\BepInEx\core\BepInEx.Unity.IL2CPP.dll</HintPath>
         </Reference>
         <Reference Include="Il2CppInterop.Common">
-            <HintPath>..\libs\Il2CppInterop\Il2CppInterop.Common.dll</HintPath>
+            <HintPath>$(GameDir)\BepInEx\core\Il2CppInterop.Common.dll</HintPath>
         </Reference>
         <Reference Include="Il2CppInterop.Generator">
-            <HintPath>..\libs\Il2CppInterop\Il2CppInterop.Generator.dll</HintPath>
+            <HintPath>$(GameDir)\BepInEx\core\Il2CppInterop.Generator.dll</HintPath>
         </Reference>
         <Reference Include="Il2CppInterop.HarmonySupport">
-            <HintPath>..\libs\Il2CppInterop\Il2CppInterop.HarmonySupport.dll</HintPath>
+            <HintPath>$(GameDir)\BepInEx\core\Il2CppInterop.HarmonySupport.dll</HintPath>
         </Reference>
         <Reference Include="Il2CppInterop.Runtime">
-            <HintPath>..\libs\Il2CppInterop\Il2CppInterop.Runtime.dll</HintPath>
+            <HintPath>$(GameDir)\BepInEx\core\Il2CppInterop.Runtime.dll</HintPath>
         </Reference>
         <Reference Include="Il2CppSystem">
-            <HintPath>..\libs\Il2Cppmscorlib.dll</HintPath>
+            <HintPath>$(GameDir)\BepInEx\interop\Il2Cppmscorlib.dll</HintPath>
         </Reference>
-
-        <Reference Include="UnityEngine.AIModule">
-            <HintPath>..\libs\UnityEngine\cpp2ilinterop\UnityEngine.AIModule.dll</HintPath>
-        </Reference>
-        <Reference Include="UnityEngine.AndroidJNIModule">
-            <HintPath>..\libs\UnityEngine\cpp2ilinterop\UnityEngine.AndroidJNIModule.dll</HintPath>
-        </Reference>
+        
         <Reference Include="UnityEngine.AnimationModule">
-            <HintPath>..\libs\UnityEngine\cpp2ilinterop\UnityEngine.AnimationModule.dll</HintPath>
+            <HintPath>$(GameDir)\BepInEx\interop\UnityEngine.AnimationModule.dll</HintPath>
         </Reference>
         <Reference Include="UnityEngine.AssetBundleModule">
-            <HintPath>..\libs\UnityEngine\cpp2ilinterop\UnityEngine.AssetBundleModule.dll</HintPath>
+            <HintPath>$(GameDir)\BepInEx\interop\UnityEngine.AssetBundleModule.dll</HintPath>
         </Reference>
         <Reference Include="UnityEngine.AudioModule">
-            <HintPath>..\libs\UnityEngine\cpp2ilinterop\UnityEngine.AudioModule.dll</HintPath>
+            <HintPath>$(GameDir)\BepInEx\interop\UnityEngine.AudioModule.dll</HintPath>
         </Reference>
         <Reference Include="UnityEngine.CoreModule">
-            <HintPath>..\libs\UnityEngine\cpp2ilinterop\UnityEngine.CoreModule.dll</HintPath>
+            <HintPath>$(GameDir)\BepInEx\interop\UnityEngine.CoreModule.dll</HintPath>
         </Reference>
         <Reference Include="UnityEngine.DirectorModule">
-            <HintPath>..\libs\UnityEngine\cpp2ilinterop\UnityEngine.DirectorModule.dll</HintPath>
+            <HintPath>$(GameDir)\BepInEx\interop\UnityEngine.DirectorModule.dll</HintPath>
         </Reference>
         <Reference Include="UnityEngine.GameCenterModule">
-            <HintPath>..\libs\UnityEngine\cpp2ilinterop\UnityEngine.GameCenterModule.dll</HintPath>
+            <HintPath>$(GameDir)\BepInEx\interop\UnityEngine.GameCenterModule.dll</HintPath>
         </Reference>
         <Reference Include="UnityEngine.GridModule">
-            <HintPath>..\libs\UnityEngine\cpp2ilinterop\UnityEngine.GridModule.dll</HintPath>
+            <HintPath>$(GameDir)\BepInEx\interop\UnityEngine.GridModule.dll</HintPath>
         </Reference>
         <Reference Include="UnityEngine.ImageConversionModule">
-            <HintPath>..\libs\UnityEngine\cpp2ilinterop\UnityEngine.ImageConversionModule.dll</HintPath>
+            <HintPath>$(GameDir)\BepInEx\interop\UnityEngine.ImageConversionModule.dll</HintPath>
         </Reference>
         <Reference Include="UnityEngine.IMGUIModule">
-            <HintPath>..\libs\UnityEngine\cpp2ilinterop\UnityEngine.IMGUIModule.dll</HintPath>
+            <HintPath>$(GameDir)\BepInEx\interop\UnityEngine.IMGUIModule.dll</HintPath>
         </Reference>
         <Reference Include="UnityEngine.InputLegacyModule">
-            <HintPath>..\libs\UnityEngine\cpp2ilinterop\UnityEngine.InputLegacyModule.dll</HintPath>
+            <HintPath>$(GameDir)\BepInEx\interop\UnityEngine.InputLegacyModule.dll</HintPath>
         </Reference>
         <Reference Include="UnityEngine.InputModule">
-            <HintPath>..\libs\UnityEngine\cpp2ilinterop\UnityEngine.InputModule.dll</HintPath>
+            <HintPath>$(GameDir)\BepInEx\interop\UnityEngine.InputModule.dll</HintPath>
         </Reference>
         <Reference Include="UnityEngine.JSONSerializeModule">
-            <HintPath>..\libs\UnityEngine\cpp2ilinterop\UnityEngine.JSONSerializeModule.dll</HintPath>
+            <HintPath>$(GameDir)\BepInEx\interop\UnityEngine.JSONSerializeModule.dll</HintPath>
         </Reference>
         <Reference Include="UnityEngine.ParticleSystemModule">
-            <HintPath>..\libs\UnityEngine\cpp2ilinterop\UnityEngine.ParticleSystemModule.dll</HintPath>
+            <HintPath>$(GameDir)\BepInEx\interop\UnityEngine.ParticleSystemModule.dll</HintPath>
         </Reference>
         <Reference Include="UnityEngine.Physics2DModule">
-            <HintPath>..\libs\UnityEngine\cpp2ilinterop\UnityEngine.Physics2DModule.dll</HintPath>
+            <HintPath>$(GameDir)\BepInEx\interop\UnityEngine.Physics2DModule.dll</HintPath>
         </Reference>
         <Reference Include="UnityEngine.PhysicsModule">
-            <HintPath>..\libs\UnityEngine\cpp2ilinterop\UnityEngine.PhysicsModule.dll</HintPath>
+            <HintPath>$(GameDir)\BepInEx\interop\UnityEngine.PhysicsModule.dll</HintPath>
         </Reference>
         <Reference Include="UnityEngine.ScreenCaptureModule">
-            <HintPath>..\libs\UnityEngine\cpp2ilinterop\UnityEngine.ScreenCaptureModule.dll</HintPath>
+            <HintPath>$(GameDir)\BepInEx\interop\UnityEngine.ScreenCaptureModule.dll</HintPath>
         </Reference>
         <Reference Include="UnityEngine.SharedInternalsModule">
-            <HintPath>..\libs\UnityEngine\cpp2ilinterop\UnityEngine.SharedInternalsModule.dll</HintPath>
+            <HintPath>$(GameDir)\BepInEx\interop\UnityEngine.SharedInternalsModule.dll</HintPath>
         </Reference>
         <Reference Include="UnityEngine.SpriteShapeModule">
-            <HintPath>..\libs\UnityEngine\cpp2ilinterop\UnityEngine.SpriteShapeModule.dll</HintPath>
+            <HintPath>$(GameDir)\BepInEx\interop\UnityEngine.SpriteShapeModule.dll</HintPath>
         </Reference>
         <Reference Include="UnityEngine.SubsystemsModule">
-            <HintPath>..\libs\UnityEngine\cpp2ilinterop\UnityEngine.SubsystemsModule.dll</HintPath>
+            <HintPath>$(GameDir)\BepInEx\interop\UnityEngine.SubsystemsModule.dll</HintPath>
         </Reference>
         <Reference Include="UnityEngine.TerrainModule">
-            <HintPath>..\libs\UnityEngine\cpp2ilinterop\UnityEngine.TerrainModule.dll</HintPath>
+            <HintPath>$(GameDir)\BepInEx\interop\UnityEngine.TerrainModule.dll</HintPath>
         </Reference>
         <Reference Include="UnityEngine.TextRenderingModule">
-            <HintPath>..\libs\UnityEngine\cpp2ilinterop\UnityEngine.TextRenderingModule.dll</HintPath>
+            <HintPath>$(GameDir)\BepInEx\interop\UnityEngine.TextRenderingModule.dll</HintPath>
         </Reference>
         <Reference Include="UnityEngine.TilemapModule">
-            <HintPath>..\libs\UnityEngine\cpp2ilinterop\UnityEngine.TilemapModule.dll</HintPath>
+            <HintPath>$(GameDir)\BepInEx\interop\UnityEngine.TilemapModule.dll</HintPath>
         </Reference>
         <Reference Include="UnityEngine.UI">
-            <HintPath>..\libs\UnityEngine\cpp2ilinterop\UnityEngine.UI.dll</HintPath>
+            <HintPath>$(GameDir)\BepInEx\interop\UnityEngine.UI.dll</HintPath>
         </Reference>
         <Reference Include="UnityEngine.UIElementsNativeModule">
-            <HintPath>..\libs\UnityEngine\cpp2ilinterop\UnityEngine.UIElementsNativeModule.dll</HintPath>
+            <HintPath>$(GameDir)\BepInEx\interop\UnityEngine.UIElementsNativeModule.dll</HintPath>
         </Reference>
         <Reference Include="UnityEngine.UIModule">
-            <HintPath>..\libs\UnityEngine\cpp2ilinterop\UnityEngine.UIModule.dll</HintPath>
+            <HintPath>$(GameDir)\BepInEx\interop\UnityEngine.UIModule.dll</HintPath>
         </Reference>
         <Reference Include="UnityEngine.UnityAnalyticsModule">
-            <HintPath>..\libs\UnityEngine\cpp2ilinterop\UnityEngine.UnityAnalyticsModule.dll</HintPath>
+            <HintPath>$(GameDir)\BepInEx\interop\UnityEngine.UnityAnalyticsModule.dll</HintPath>
         </Reference>
         <Reference Include="UnityEngine.UnityWebRequestModule">
-            <HintPath>..\libs\UnityEngine\cpp2ilinterop\UnityEngine.UnityWebRequestModule.dll</HintPath>
+            <HintPath>$(GameDir)\BepInEx\interop\UnityEngine.UnityWebRequestModule.dll</HintPath>
         </Reference>
         <Reference Include="UnityEngine.VFXModule">
-            <HintPath>..\libs\UnityEngine\cpp2ilinterop\UnityEngine.VFXModule.dll</HintPath>
+            <HintPath>$(GameDir)\BepInEx\interop\UnityEngine.VFXModule.dll</HintPath>
         </Reference>
         <Reference Include="UnityEngine.VideoModule">
-            <HintPath>..\libs\UnityEngine\cpp2ilinterop\UnityEngine.VideoModule.dll</HintPath>
+            <HintPath>$(GameDir)\BepInEx\interop\UnityEngine.VideoModule.dll</HintPath>
         </Reference>
         <Reference Include="UnityEngine.VRModule">
-            <HintPath>..\libs\UnityEngine\cpp2ilinterop\UnityEngine.VRModule.dll</HintPath>
+            <HintPath>$(GameDir)\BepInEx\interop\UnityEngine.VRModule.dll</HintPath>
         </Reference>
         <Reference Include="UnityEngine.XRModule">
-            <HintPath>..\libs\UnityEngine\cpp2ilinterop\UnityEngine.XRModule.dll</HintPath>
+            <HintPath>$(GameDir)\BepInEx\interop\UnityEngine.XRModule.dll</HintPath>
         </Reference>
     </ItemGroup>
 
@@ -157,9 +154,26 @@
     </ItemGroup>
 
     <Target Name="CopyToGameDir" AfterTargets="AfterBuild">
-        <Message Text="Copying $(OutDir)$(AssemblyName).dll to game folder" Importance="high" />
-        <Copy SourceFiles="$(OutDir)$(AssemblyName).dll" DestinationFiles="$(GameDir)\BepInEx\plugins\$(AssemblyName).dll" />
-        <Copy SourceFiles="$(OutDir)$(AssemblyName).pdb" DestinationFiles="$(GameDir)\BepInEx\plugins\$(AssemblyName).pdb" />
+        <!-- Collect all defined GameDir properties into an item group -->
+        <ItemGroup>
+            <GameDirList Include="$(GameDir)" Condition="'$(GameDir)' != ''" />
+            <GameDirList Include="$(GameDir2)" Condition="'$(GameDir2)' != ''" />
+            <GameDirList Include="$(GameDir3)" Condition="'$(GameDir3)' != ''" />
+            <GameDirList Include="$(GameDir4)" Condition="'$(GameDir4)' != ''" />
+            <GameDirList Include="$(GameDir5)" Condition="'$(GameDir5)' != ''" />
+            <GameDirList Include="$(GameDir6)" Condition="'$(GameDir6)' != ''" />
+            <GameDirList Include="$(GameDir7)" Condition="'$(GameDir7)' != ''" />
+            <GameDirList Include="$(GameDir8)" Condition="'$(GameDir8)' != ''" />
+            <GameDirList Include="$(GameDir9)" Condition="'$(GameDir9)' != ''" />
+            <GameDirList Include="$(GameDir10)" Condition="'$(GameDir10)' != ''" />
+        </ItemGroup>
+        
+        <!-- Copy DLL and PDB to each game directory using batching -->
+        <Copy SourceFiles="$(OutDir)$(AssemblyName).dll" DestinationFolder="%(GameDirList.Identity)\BepInEx\plugins" SkipUnchangedFiles="true" />
+        <Copy SourceFiles="$(OutDir)$(AssemblyName).pdb" DestinationFolder="%(GameDirList.Identity)\BepInEx\plugins" SkipUnchangedFiles="true" />
+        
+        <!-- Display message for each directory -->
+        <Message Text="Copied $(AssemblyName).dll to: %(GameDirList.Identity)" Importance="high" />
     </Target>
 
     <Target Name="PreBuild" BeforeTargets="PreBuildEvent">
