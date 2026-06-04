@@ -32,6 +32,8 @@ public class Plugin: BasePlugin
         sw.Stop();
         PriconneTLFixup.Log.Debug($"Patching took {sw.ElapsedMilliseconds}ms");
         
+        FullscreenController.Init();
+        
         PriconneTLFixup.Log.Info("PriconneTLFixup loaded!");
         PriconneTLFixup.Log.Info("If you want to contribute to this project, please visit:");
         PriconneTLFixup.Log.Info("https://github.com/Kevga/PriconneTLFixup");
