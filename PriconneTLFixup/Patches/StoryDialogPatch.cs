@@ -7,9 +7,26 @@ using Elements;
 using HarmonyLib;
 using Il2CppInterop.Runtime.InteropTypes.Arrays;
 using UnityEngine;
+using XUnity.AutoTranslator.Plugin.Core;
 using Object = Il2CppSystem.Object;
 
 namespace PriconneTLFixup.Patches;
+
+internal struct TranslatableString
+{
+    public string Original;
+    public string? Translated;
+    public int Index;
+    public int? SubIndex;
+
+    public TranslatableString(string original, int index)
+    {
+        Original = original;
+        Index = index;
+        Translated = null;
+        SubIndex = null;
+    }
+}
 
 /**
  * This patch fixes an issue where the dialog text box gets cleared when it shouldn't. The game automatically does this
@@ -89,6 +106,30 @@ public class StoryDialogPatch
         typewriterEffect.ResetToOffset(offset);
         _typewriteFinishAction.Invoke();
         typewriterEffect.Finish();
+    }
+
+    public static string TryTranslate(string text)
+    {
+        if (Plugin.AutoTranslatorPlugin == null)
+        {
+            return text;
+        }
+        
+        UntranslatedText untranslatedText = new UntranslatedText(text, false, false, true, false, false);
+        if (Plugin.AutoTranslatorPlugin.TextCache.TryGetTranslation(untranslatedText, false, false, -1, out var translatedText, out var _))
+        {
+            return translatedText.Replace("{playername}", Singleton<UserData>.Instance.UserInfo.UserName);
+        }
+        
+        UntranslatedText untranslatedText2 = new UntranslatedText(text, false, false, true, true, true);
+        if (Plugin.AutoTranslatorPlugin.TextCache.TryGetTranslation(untranslatedText2, false, true, -1, out translatedText, out var _))
+        {
+            return translatedText.Replace("{playername}", Singleton<UserData>.Instance.UserInfo.UserName);
+        }
+
+        text = text.Replace("{playername}", Singleton<UserData>.Instance.UserInfo.UserName);
+
+        return text;
     }
 }
 
@@ -187,7 +228,7 @@ public class StoryLogColorPatch
 public static class StoryPretranslationPatch
 {
     internal static CustomUILabel? PretranslationLabel;
-    private static int currentTranslationIndex;
+    
     private static Regex userNameImplement = new("\\{0\\}", RegexOptions.Compiled);
     private static Regex deleteDoubleQuotation = new("^\"(.*)\"$", RegexOptions.Compiled);
 
@@ -202,14 +243,13 @@ public static class StoryPretranslationPatch
             UnityEngine.Object.DontDestroyOnLoad(PretranslationLabel);
             Log.Info("Created story pre-translation label");
         }
-
-        currentTranslationIndex = 0;
         
         CoroutineStarter.Instance.StartCoroutine(PretranslationCoroutine(__instance).WrapToIl2Cpp());
     }
     
     internal static IEnumerator PretranslationCoroutine(StoryManager manager)
-    {
+    { 
+        int currentTranslationIndex = 0;
         var commands = manager.storyCommandList?.ToArray();
         if (commands == null)
         {
@@ -293,7 +333,7 @@ public static class StoryPretranslationPatch
         {
             return text;
         }
-        return userNameImplement.Replace(text, playerName);
+        return userNameImplement.Replace(text, playerName).ReplaceNewLineWithString("\n");
     }
     
     internal static string GetNextStringToTranslate(CommandStruct[] commands, int startIndex, ref int currentIndex)
@@ -312,7 +352,7 @@ public static class StoryPretranslationPatch
         currentIndex = nextTranslatable + 1;
         for (var i = startIndex; i < nextTranslatable; i++)
         {
-            Log.Debug("Command ["+i+"]: " + commands[i].Number + " - Args: " + string.Join(", ", commands[i].Args.ToArray()));
+            //Log.Debug("Command ["+i+"]: " + commands[i].Number + " - Args: " + string.Join(", ", commands[i].Args.ToArray()));
             if (commands[i].Number == CommandNumber.CHOICE)
             {
                 currentIndex = i+1;
@@ -358,7 +398,7 @@ public static class StoryPretranslationPatch
             return -1;
         }
         
-        for (var i = index + 1; i < commands.Length; i++)
+        for (var i = index; i < commands.Length; i++)
         {
             if (
                 commands[i].Number == CommandNumber.TOUCH || 
