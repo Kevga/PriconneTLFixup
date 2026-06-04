@@ -5,7 +5,7 @@ using XUnity.AutoTranslator.Plugin.Core;
 
 namespace PriconneTLFixup;
 
-[BepInPlugin("PriconneTLFixup", "PriconneTLFixup by Dakari", "1.4.3")]
+[BepInPlugin("PriconneTLFixup", "PriconneTLFixup by Dakari", "1.6.0")]
 [BepInProcess("PrincessConnectReDive.exe")]
 public class Plugin: BasePlugin
 {
@@ -35,8 +35,8 @@ public class Plugin: BasePlugin
         FullscreenController.Init();
         
         PriconneTLFixup.Log.Info("PriconneTLFixup loaded!");
-        PriconneTLFixup.Log.Info("If you want to contribute to this project, please visit:");
-        PriconneTLFixup.Log.Info("https://github.com/Kevga/PriconneTLFixup");
+        //PriconneTLFixup.Log.Info("If you want to contribute to this project, please visit:");
+        //PriconneTLFixup.Log.Info("https://github.com/Kevga/PriconneTLFixup");
     }
     
     public override bool Unload()
