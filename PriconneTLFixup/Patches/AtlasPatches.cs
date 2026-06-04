@@ -4,6 +4,7 @@ using BepInEx;
 using Cute;
 using HarmonyLib;
 using UnityEngine;
+using XUnity.AutoTranslator.Plugin.Core;
 
 namespace PriconneTLFixup.Patches;
 
@@ -11,9 +12,6 @@ namespace PriconneTLFixup.Patches;
 [HarmonyWrapSafe]
 public class AtlasInitPatch
 {
-    private static readonly string AtlasPath =
-        Path.Join(Paths.BepInExRootPath, "Translation", "en", "Other", "atlases");
-
     public static readonly Dictionary<string, UIAtlas> Atlases = new();
     public static readonly Dictionary<string, UIAtlas> OriginalAtlases = new();
     internal const string NameSuffix = " (Fixup)";
@@ -21,18 +19,21 @@ public class AtlasInitPatch
     public static void Postfix()
     {
         string[] jsonFiles;
+        var language = AutoTranslatorSettings.DestinationLanguage;
+        var atlasPath = Path.Join(Paths.BepInExRootPath, "Translation", language ?? "en", "Other", "atlases");
+        
         try
         {
-            jsonFiles = Directory.GetFiles(AtlasPath, "*.json");
+            jsonFiles = Directory.GetFiles(atlasPath, "*.json");
         } catch (System.Exception)
         {
-            Log.Error("AtlasInitPatch: AtlasPath not found: " + AtlasPath);
+            Log.Error("AtlasInitPatch: atlasPath not found: " + atlasPath);
             return;
         }
 
         if (jsonFiles.Length == 0)
         {
-            Log.Error("No atlases found in " + AtlasPath);
+            Log.Error("No atlases found in " + atlasPath);
             return;
         }
         
@@ -46,16 +47,16 @@ public class AtlasInitPatch
         //The json files are serialized MonoBehaviours. Create a gameobject and attach one monobehaviour per file.
         //Then, deserialize the json into the monobehaviour, overwriting the properties.
 
-        var files = Directory.EnumerateFiles(AtlasPath);
+        var files = Directory.EnumerateFiles(atlasPath);
         var imageFiles = files.ToList().FindAll(f => f.EndsWith(".png")).Select(Path.GetFileNameWithoutExtension)
             .ToList();
         if (!imageFiles.Any())
         {
-            Log.Error("No pngs found in " + AtlasPath);
+            Log.Error("No pngs found in " + atlasPath);
             return;
         }
 
-        foreach (var f in imageFiles)
+        foreach (var f in imageFiles) 
         {
             Log.Debug("Found file " + f);
         }
@@ -65,25 +66,40 @@ public class AtlasInitPatch
         foreach (var jsonFile in jsonFiles)
         {
             var atlasName = Path.GetFileNameWithoutExtension(jsonFile);
-            var matches = imageFiles.Where(f => f != null && f.StartsWith(atlasName));
+            var matches = imageFiles.Where(f => f != null && Regex.IsMatch(f, "^" + atlasName + @"(\s\[([0-9A-F]{10})\])?$"));
             var matchList = matches.ToList();
             if (!matchList.Any() || matchList[0] == null)
             {
                 Log.Error("No png found for " + atlasName + " (json: " + jsonFile + ")");
                 continue;
             }
+            
+            var textureFileName = matchList[0];
+            var texturePath = Path.Join(atlasPath, textureFileName+".png");
 
-            if (matchList.Count > 1 && !Regex.IsMatch(matchList[0]!, "^" + atlasName + @"[ \.]"))
+            if (matchList.Count > 1)
             {
-                Log.Error("Multiple pngs found for " + jsonFile);
+                Log.Debug("Multiple pngs found for " + jsonFile);
+                
+                //Select file that has the most recent "modified" date
+                var mostRecentFile = matchList[0];
+                var mostRecentDate = File.GetLastWriteTime(Path.Join(atlasPath, mostRecentFile + ".png"));
                 foreach (var match in matchList)
                 {
-                    Log.Error(match);
+                    Log.Debug("Checking " + match);
+                    var date = File.GetLastWriteTime(Path.Join(atlasPath, match + ".png"));
+                    if (date > mostRecentDate)
+                    {
+                        mostRecentFile = match;
+                        mostRecentDate = date;
+                    }
                 }
-                continue;
+                
+                textureFileName = mostRecentFile;
+                texturePath = Path.Join(atlasPath, textureFileName+".png");
+                Log.Debug("Selected " + textureFileName + " as the most recent file");
             }
 
-            var texturePath = Path.Join(AtlasPath, matchList[0]+".png");
             if (!File.Exists(texturePath))
             {
                 Log.Error("No png found for " + jsonFile + ": " + texturePath);
@@ -101,6 +117,7 @@ public class AtlasInitPatch
             atlas.name = atlasName + NameSuffix;
             JsonUtility.FromJsonInternal(json, atlas, atlas.GetIl2CppType());
             var atlasSize = GetAtlasSize(atlas);
+            Log.Debug("Atlas " + atlas.name + " size calculated as " + atlasSize + "x" + atlasSize);
             
             var textureData = File.ReadAllBytes(texturePath);
             var texture = new Texture2D(atlasSize, atlasSize, TextureFormat.RGBA32, false);
@@ -158,6 +175,11 @@ public class WidgetPatch
 {
     public static void Prefix(UISprite __instance)
     {
+        if (!Util.IsTranslationEnabled())
+        {
+            return;
+        }
+        
         if (__instance.atlas == null)
         {
             return;
@@ -169,7 +191,7 @@ public class WidgetPatch
             return;
         }
 
-        if (replacementAtlas.GetSprite(__instance.mSpriteName) != null)
+        if (replacementAtlas.GetSprite(__instance.mSpriteName) != null && !IsBlacklisted(__instance.mSpriteName))
         {
             if (!AtlasInitPatch.OriginalAtlases.ContainsKey(__instance.atlas.name)) 
             {
@@ -178,10 +200,31 @@ public class WidgetPatch
             
             __instance.mAtlas = replacementAtlas;
         }
-        else
+        else if (!IsBlacklisted(__instance.mSpriteName))
         {
             Log.Warn($"Sprite {__instance.mSpriteName} not found in atlas {replacementAtlas.name}");
         }
+    }
+
+    public static bool IsBlacklisted(string spriteName)
+    {
+        //declare array of disallowed names
+        string[] disallowedNames = new string[]
+        {
+            "common_tab_selected",
+            "common_iframe_bg",
+            "common_scroll_bar",
+            "common_scroll_bg",
+            "common_icon_star_on",
+            "common_icon_star_off",
+            "common_bg_price",
+            "common_line_text",
+            "common_info_area",
+            "common_dt_bg",
+        };
+        
+        //check if spriteName is in the disallowedNames array
+        return disallowedNames.Contains(spriteName);
     }
 }
 
@@ -191,6 +234,11 @@ public class SpriteNameUpdatePatch
 {
     public static void Prefix(UISprite __instance, string value)
     {
+        if (!Util.IsTranslationEnabled())
+        {
+            return;
+        }
+        
         if (__instance.atlas == null)
         {
             return;
@@ -202,14 +250,14 @@ public class SpriteNameUpdatePatch
             return;
         }
 
-        if (replacementAtlas.GetSprite(value) != null)
+        if (replacementAtlas.GetSprite(value) != null && !WidgetPatch.IsBlacklisted(value))
         {
             if (__instance.atlas.name != replacementAtlas.name)
             {
                 __instance.mAtlas = replacementAtlas; 
             }
         }
-        else if (__instance.atlas.name.Contains(AtlasInitPatch.NameSuffix))
+        else if (__instance.atlas.name.Contains(AtlasInitPatch.NameSuffix) && !WidgetPatch.IsBlacklisted(value))
         {
             Log.Debug($"Sprite {value} not found in atlas {replacementAtlas.name}");
             var originalAtlas = AtlasInitPatch.OriginalAtlases.GetValueOrDefault(__instance.atlas.name.Replace(AtlasInitPatch.NameSuffix, ""));
