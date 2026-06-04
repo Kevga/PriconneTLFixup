@@ -11,14 +11,13 @@ namespace PriconneTLFixup.Patches;
 [HarmonyWrapSafe]
 public class TextIdPatch2
 {
-    private static readonly string DictPath =
-        Path.Join(Paths.BepInExRootPath, "Translation", "en", "Other", "text_id.txt");
-
     internal static readonly Dictionary<eTextId, string> OriginalStringsDict = new();
     internal static readonly Dictionary<eTextId, string> TranslatedStringsDict = new();
 
     public static void Postfix()
     {
+        var language = AutoTranslatorSettings.DestinationLanguage;
+        var DictPath = Path.Join(Paths.BepInExRootPath, "Translation", language ?? "en", "Other", "text_id.txt");
         if (!File.Exists(DictPath))
         {
             Log.Error($"Text id dictionary file not found: {DictPath}");
@@ -68,7 +67,12 @@ public class TranslationTogglePatch
         var translationEnabled = AutoTranslationPlugin.Current._isInTranslatedMode;
         if (translationEnabled)
         {
-            var so = Singleton<ConstTextData>.Instance.scriptableObject;
+            var so = Singleton<ConstTextData>.Instance?.scriptableObject;
+            if (so == null)
+            {
+                return;
+            }
+            
             foreach (var (key, value) in TextIdPatch2.TranslatedStringsDict)
             {
                 so.DataDictionary[key] = value;
@@ -76,7 +80,12 @@ public class TranslationTogglePatch
         }
         else
         {
-            var so = Singleton<ConstTextData>.Instance.scriptableObject;
+            var so = Singleton<ConstTextData>.Instance?.scriptableObject;
+            if (so == null)
+            {
+                return;
+            }
+            
             foreach (var (key, value) in TextIdPatch2.OriginalStringsDict)
             {
                 so.DataDictionary[key] = value;
