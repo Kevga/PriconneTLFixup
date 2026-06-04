@@ -20,7 +20,7 @@ public class SkillBubblePatch
 
     private static IEnumerator updateSkillBalloon(LifeGaugeController controller, string _skillName)
     {
-        var timer = 1.2f;
+        var timer = 1f;
         while (!_skillName.IsNullOrEmpty())
         {
             var translatedName = controller.skillNameLabel.text;
@@ -32,7 +32,7 @@ public class SkillBubblePatch
             controller.skillNameLabel.text = translatedName;
             
             timer -= controller.battleManager.DeltaTime;
-            if (timer < 0f || (controller.owner.IsFront && controller.battleManager.BlackOutUnitList.Count != 0))
+            if (timer < 0f || (controller.owner.ComponentSortOrder.IsFront && controller.battleManager.BlackOutUnitList.Count != 0))
             {
                 controller.skillNameBalloon.gameObject.SetActive(false);
                 if (!controller.isMoving && !controller.skillBalloonVisible && controller.iconCount == 0)
@@ -54,7 +54,7 @@ public class SkillBubblePatch
             return false;
         }
 
-        if (__instance.owner.IsFront && __instance.battleManager.BlackOutUnitList.Count != 0)
+        if (__instance.owner.ComponentSortOrder.IsFront && __instance.battleManager.BlackOutUnitList.Count != 0)
         {
             return false;
         }
