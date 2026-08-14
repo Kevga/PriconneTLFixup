@@ -1,6 +1,7 @@
 using BepInEx;
 using Elements;
 using HarmonyLib;
+using UnityEngine;
 using XUnity.AutoTranslator.Plugin.Core;
 
 namespace PriconneTLFixup.Patches;
@@ -9,6 +10,14 @@ namespace PriconneTLFixup.Patches;
 [HarmonyWrapSafe]
 public class DictPatch
 {
+    private static readonly Dictionary<string, string[]> NameDictWithoutSpaces = new(StringComparer.Ordinal);
+    private static readonly HashSet<string> MissingNameWarnings = new(StringComparer.Ordinal);
+    private static readonly HashSet<string> FavoriteUnitNames = new(StringComparer.Ordinal);
+    private static string? _cachedFilter;
+    private static string _cachedLowerCaseFilter = string.Empty;
+    private static string _cachedCompactFilter = string.Empty;
+    private static int _favoriteCacheFrame = -1;
+
     public static void Prepare()
     {
         //For some reason Prepare is called twice
@@ -23,15 +32,15 @@ public class DictPatch
     
     public static bool Prefix(ref bool __result, string _source, string _filter)
     {
-        var found = NameDict.TryGetValue(_source, out var enSpellings);
-        if (!found || enSpellings == null)
+        if (!NameDict.TryGetValue(_source, out var enSpellings) ||
+            !NameDictWithoutSpaces.TryGetValue(_source, out var compactSpellings))
         {
-            Log.Warn($"UnitSort.MatchSearchFilter: {nameof(_source)} not found in dictionary: {_source}");
+            WarnMissingName(_source, "UnitSort.MatchSearchFilter");
             __result = false;
             return true;
         }
 
-        var lowerCaseInput = _filter.ToLower();
+        var (lowerCaseInput, compactInput) = NormalizeFilter(_filter);
         if (lowerCaseInput == "fav")
         {
             __result = IsFavorited(_source);
@@ -39,16 +48,15 @@ public class DictPatch
         }
         
         var match = false;
-        foreach (var enSpelling in enSpellings)
+        for (var i = 0; i < enSpellings.Length; i++)
         {
-            if (enSpelling.ToLower().StartsWith(lowerCaseInput, true, UnitDefine.UNIT_SEARCH_REMOVE_STRING, UnitDefine.UnitNameSearchSplitString))
+            if (enSpellings[i].StartsWith(lowerCaseInput, true, UnitDefine.UNIT_SEARCH_REMOVE_STRING, UnitDefine.UnitNameSearchSplitString))
             {
                 match = true;
                 break;
-                
             } 
             
-            if (enSpelling.ToLower().Replace(" ", "").StartsWith(lowerCaseInput.Replace(" ", ""), true, UnitDefine.UNIT_SEARCH_REMOVE_STRING, UnitDefine.UnitNameSearchSplitString))
+            if (compactSpellings[i].StartsWith(compactInput, true, UnitDefine.UNIT_SEARCH_REMOVE_STRING, UnitDefine.UnitNameSearchSplitString))
             {
                 match = true;
                 break;
@@ -61,19 +69,47 @@ public class DictPatch
     
     private static bool IsFavorited(string unitName)
     {
+        var currentFrame = Time.frameCount;
+        if (_favoriteCacheFrame == currentFrame)
+        {
+            return FavoriteUnitNames.Contains(unitName);
+        }
+
+        FavoriteUnitNames.Clear();
         var unitDataDict = Singleton<UserData>.Instance.UnitParameterDictionary;
         foreach (var unitParam in unitDataDict._values)
         {
-            if (unitParam.MasterData.UnitName == unitName)
+            if (unitParam.UniqueData.FavoriteFlag == 1)
             {
-                return unitParam.UniqueData.FavoriteFlag == 1; 
+                FavoriteUnitNames.Add(unitParam.MasterData.UnitName);
             }
         }
 
-        return false;
+        _favoriteCacheFrame = currentFrame;
+        return FavoriteUnitNames.Contains(unitName);
     }
     
-    internal static readonly Dictionary<string, string[]> NameDict = new();
+    internal static readonly Dictionary<string, string[]> NameDict = new(StringComparer.Ordinal);
+
+    internal static (string LowerCase, string Compact) NormalizeFilter(string filter)
+    {
+        if (!string.Equals(_cachedFilter, filter, StringComparison.Ordinal))
+        {
+            _cachedFilter = filter;
+            _cachedLowerCaseFilter = filter.ToLower();
+            _cachedCompactFilter = _cachedLowerCaseFilter.Replace(" ", "");
+        }
+
+        return (_cachedLowerCaseFilter, _cachedCompactFilter);
+    }
+
+    internal static void WarnMissingName(string source, string caller)
+    {
+        if (MissingNameWarnings.Add(source))
+        {
+            Log.Warn($"{caller}: source not found in dictionary: {source}");
+        }
+    }
 
     private static void ReadUnitNameFile()
     {
@@ -86,28 +122,31 @@ public class DictPatch
             return;
         }
         
-        var file = new StreamReader(DictPath);
+        using var file = new StreamReader(DictPath);
         while (file.ReadLine() is { } ln)
         {
-            var parts = ln.Split("=");
-            if (parts.Length != 2)
+            var separatorIndex = ln.IndexOf('=');
+            if (separatorIndex < 0)
             {
                 continue;
             }
 
-            var jp = parts[0];
-            var en = parts[1];
+            var jp = ln[..separatorIndex];
+            var en = ln[(separatorIndex + 1)..];
             if (en.Length == 0)
             {
                 continue;
             }
 
-            var enVariants = en.Split(";");
+            var normalizedVariants = en.Split(';')
+                .Where(enVariant => enVariant.Length > 0)
+                .Select(enVariant => enVariant.ToLower())
+                .Where(enVariant => enVariant != "christmas")
+                .ToArray();
 
-            NameDict[jp] = enVariants.Where(enVariant => enVariant.Length > 0 && enVariant.ToLower() != "christmas").ToArray();
+            NameDict[jp] = normalizedVariants;
+            NameDictWithoutSpaces[jp] = normalizedVariants.Select(enVariant => enVariant.Replace(" ", "")).ToArray();
         }
-
-        file.Close();
     }
 }
 

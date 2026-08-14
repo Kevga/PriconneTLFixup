@@ -4,7 +4,7 @@ using HarmonyLib;
 
 namespace PriconneTLFixup.Patches;
 
-[HarmonyPatch(typeof(PartsShopFooter), nameof(PartsShopFooter._MaterialFilterBySearchText_b__109_0))]
+[HarmonyPatch(typeof(PartsShopFooter), nameof(PartsShopFooter.MaterialFilterBySearchText))]
 [HarmonyWrapSafe]
 public class ShopSearchPatch
 {
@@ -33,17 +33,17 @@ public class ShopSearchPatch
         var found = DictPatch.NameDict.TryGetValue(filteredSource, out var enSpellings);
         if (!found || enSpellings == null)
         {
-            Log.Warn($"UnitSort.MatchSearchFilter: {nameof(source)} not found in dictionary: {filteredSource}");
+            DictPatch.WarnMissingName(filteredSource, nameof(ShopSearchPatch));
             __result = false;
             return true;
         }
 
-        var lowerCaseInput = __instance.LastMaterialSearchText.ToLower();
+        var lowerCaseInput = DictPatch.NormalizeFilter(__instance.GetSearchInputText(__instance.currentSystemId)).LowerCase;
         var match = false;
         for (var i = 0; i < enSpellings.Length; i++)
         {
             var enSpelling = enSpellings[i];
-            if (enSpelling.ToLower().StartsWith(lowerCaseInput, true, null, UnitDefine.UnitNameSearchSplitString))
+            if (enSpelling.StartsWith(lowerCaseInput, true, null, UnitDefine.UnitNameSearchSplitString))
             {
                 match = true;
                 break;
@@ -69,13 +69,13 @@ public class ItemSelectSearchPatch
 
         if (!DictPatch.NameDict.TryGetValue(filteredSource, out var enSpellings) || enSpellings == null)
         {
-            Log.Warn($"ItemSelectSearchPatch: source not found in dictionary: {filteredSource}");
+            DictPatch.WarnMissingName(filteredSource, nameof(ItemSelectSearchPatch));
             return false;
         }
 
         for (var i = 0; i < enSpellings.Length; i++)
         {
-            if (enSpellings[i].ToLower().StartsWith(lowerCaseSearch, true, null, UnitDefine.UnitNameSearchSplitString))
+            if (enSpellings[i].StartsWith(lowerCaseSearch, true, null, UnitDefine.UnitNameSearchSplitString))
             {
                 return true;
             }
@@ -87,7 +87,7 @@ public class ItemSelectSearchPatch
     public static bool Prefix(PartsDialogItemSelect __instance)
     {
         __instance.searchItemList.Clear();
-        var lowerCaseSearch = __instance.searchWord.ToLower();
+        var lowerCaseSearch = DictPatch.NormalizeFilter(__instance.searchWord).LowerCase;
 
         switch (__instance.tabIndex)
         {

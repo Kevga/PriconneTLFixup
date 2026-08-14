@@ -23,20 +23,11 @@ public static class FullscreenController
     
     public static void Update()
     {
-        if (Input.GetKeyDown(KeyCode.F11) || (Input.GetKeyDown(KeyCode.F4) && !Input.GetKey((KeyCode.LeftAlt))) || (Input.GetKey(KeyCode.LeftAlt) && Input.GetKeyDown(KeyCode.Return))) 
+        if (Input.GetKeyDown(KeyCode.F11) ||
+            (Input.GetKeyDown(KeyCode.F4) && !Input.GetKey(KeyCode.LeftAlt)) ||
+            (Input.GetKeyDown(KeyCode.Return) && Input.GetKey(KeyCode.LeftAlt)))
         {
             ToggleFullscreen();
-        }
-        
-        if (!isFullscreened)
-        {
-            if (Screen.width > 0.95f * Screen.currentResolution.width && Screen.height > 0.95f * Screen.currentResolution.height)
-            {
-                return;
-            }
-            
-            LastWidth = Screen.width;
-            LastHeight = Screen.height;
         }
     }
     
