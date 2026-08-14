@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Text.RegularExpressions;
+using System.Text;
 using Elements;
 using HarmonyLib;
 using Il2CppInterop.Runtime;
@@ -15,13 +16,13 @@ namespace PriconneTLFixup.Patches;
 [HarmonyWrapSafe]
 public class UIFontPatch
 {
-    private static bool _initialized = false;
+    private static bool _initialized;
     private static Font? _baseFont;
-    private static string _baseFontName = "font_base";
-    private static string _fontFolder = Path.Join(BepInEx.Paths.BepInExRootPath, "Translation", AutoTranslatorSettings.DestinationLanguage ?? "en", "Font");
-    private static string _labelFontPairsPath = Path.Join(BepInEx.Paths.BepInExRootPath, "Translation", AutoTranslatorSettings.DestinationLanguage ?? "en", "Text", "_01.font.txt");
-    private static Dictionary<string, string> _fontNameByLabel = new Dictionary<string, string>();
-    private static Dictionary<string, Font?> _fontByName = new Dictionary<string, Font?>();
+    private const string BaseFontName = "font_base";
+    private static readonly string FontFolder = Path.Join(BepInEx.Paths.BepInExRootPath, "Translation", AutoTranslatorSettings.DestinationLanguage ?? "en", "Font");
+    private static readonly string LabelFontPairsPath = Path.Join(BepInEx.Paths.BepInExRootPath, "Translation", AutoTranslatorSettings.DestinationLanguage ?? "en", "Text", "_01.font.txt");
+    private static readonly Dictionary<string, Font?> FontByName = new(StringComparer.Ordinal);
+    private static readonly List<(Regex Pattern, string FontName)> FontRules = new();
 
     private static void Prefix(CustomUILabel __instance)
     {
@@ -33,26 +34,34 @@ public class UIFontPatch
         if (!_initialized)
         {
             Log.Debug("Initializing UIFontPatch");
-            _baseFont = LoadFont(_baseFontName);
-            if (!File.Exists(_labelFontPairsPath))
+            _baseFont = LoadFont(BaseFontName);
+            if (!File.Exists(LabelFontPairsPath))
             {
-                File.Create(_labelFontPairsPath).Close();
+                File.Create(LabelFontPairsPath).Close();
             }
 
-            var labelFontPairs = File.ReadAllLines(_labelFontPairsPath);
-            var uniqueFontNames = new List<string>();
-            foreach (var pair in labelFontPairs.Where(x => x.Contains('=')))
+            var fontNameByPattern = new Dictionary<string, string>(StringComparer.Ordinal);
+            var uniqueFontNames = new HashSet<string>(StringComparer.Ordinal);
+            foreach (var pair in File.ReadLines(LabelFontPairsPath))
             {
-                string labelFullName = pair.Split('=')[0];
-                string fontName = pair.Split("=")[1];
-                _fontNameByLabel[SpecialRegexEscape(labelFullName)] = fontName;
-                if (!uniqueFontNames.Contains(fontName))
+                var separatorIndex = pair.IndexOf('=');
+                if (separatorIndex < 0)
                 {
-                    uniqueFontNames.Add(fontName);
+                    continue;
                 }
+
+                var labelFullName = pair[..separatorIndex];
+                var fontName = pair[(separatorIndex + 1)..];
+                fontNameByPattern[SpecialRegexEscape(labelFullName)] = fontName;
+                uniqueFontNames.Add(fontName);
             }
 
-            Log.Debug($"Found {_fontNameByLabel.Count} label-font pairs for UIFontPatch");
+            foreach (var (pattern, fontName) in fontNameByPattern)
+            {
+                FontRules.Add((new Regex(pattern, RegexOptions.Compiled), fontName));
+            }
+
+            Log.Debug($"Found {FontRules.Count} label-font pairs for UIFontPatch");
 
             foreach (var fontName in uniqueFontNames)
             {
@@ -60,7 +69,7 @@ public class UIFontPatch
                 Font? font = LoadFont(fontName);
                 if (font != null)
                 {
-                    _fontByName[fontName] = font;
+                    FontByName[fontName] = font;
                 }
                 else
                 {
@@ -72,27 +81,39 @@ public class UIFontPatch
             Log.Info("UIFontPatch is initialized");
         }
 
-        var goFullName = GetFullName(__instance.gameObject);
-        var label = _fontNameByLabel.Keys.FirstOrDefault(x => Regex.IsMatch(goFullName, x));
-        if (label != null)
+        string? replacementFontName = null;
+        if (FontRules.Count > 0)
         {
-            var fontName = _fontNameByLabel[label];
-            // It can randomly unload it
-            if (_fontByName[fontName] == null)
+            var goFullName = GetFullName(__instance.gameObject);
+            foreach (var rule in FontRules)
             {
-                Log.Info("Reloading Font: " + fontName);
-                _fontByName[fontName] = LoadFont(fontName);
+                if (rule.Pattern.IsMatch(goFullName))
+                {
+                    replacementFontName = rule.FontName;
+                    break;
+                }
+            }
+        }
+
+        if (replacementFontName != null)
+        {
+            // It can randomly unload it
+            if (!FontByName.TryGetValue(replacementFontName, out var font) || font == null)
+            {
+                Log.Info("Reloading Font: " + replacementFontName);
+                font = LoadFont(replacementFontName);
+                FontByName[replacementFontName] = font;
             }
 
-            __instance.trueTypeFont = _fontByName[fontName];
+            __instance.trueTypeFont = font;
         }
         else
         {
             // It can randomly unload it
             if (_baseFont == null)
             {
-                Log.Info("Reloading Font: " + _baseFontName);
-                _baseFont = LoadFont(_baseFontName);
+                Log.Info("Reloading Font: " + BaseFontName);
+                _baseFont = LoadFont(BaseFontName);
             }
 
             __instance.trueTypeFont = _baseFont;
@@ -103,7 +124,7 @@ public class UIFontPatch
     {
         Font? font = null;
         AssetBundle assetBundle = null!;
-        var fontPath = _fontFolder + fontName + ".unity3d";
+        var fontPath = Path.Join(FontFolder, fontName + ".unity3d");
         if (!File.Exists(fontPath))
         {
             Log.Warn("Font file does not exist: " + fontPath);
@@ -160,15 +181,20 @@ public class UIFontPatch
     /// <param name="go">The game object.</param>
     private static string GetFullName(GameObject go)
     {
-        string name = go.name;
-        while (go.transform.parent != null)
+        var path = new StringBuilder();
+        AppendFullName(path, go.transform);
+        return path.ToString();
+    }
+
+    private static void AppendFullName(StringBuilder path, Transform transform)
+    {
+        var parent = transform.parent;
+        if (parent != null)
         {
-            go = go.transform.parent.gameObject;
-            name = go.name + "/" + name;
+            AppendFullName(path, parent);
         }
 
-        // "/" for XUAT path compatibility
-        return "/" + name;
+        path.Append('/').Append(transform.gameObject.name);
     }
 
     private static string SpecialRegexEscape(string text)

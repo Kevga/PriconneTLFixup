@@ -21,29 +21,31 @@ public class TextMeshWordWrapPatch
             return;
         }
         
-        if (value.Length < 30)
+        if (value == null || value.Length < 30)
         {
             return;
         }
         
         _resizeInProgress = true;
-
-        if (__instance.fontSize == 24)
+        try
         {
-            __instance.fontSize = 19;
+            if (__instance.fontSize == 24)
+            {
+                __instance.fontSize = 19;
+            }
+
+            var textSize = new TextSize(__instance);
+            if (textSize.Width <= MaxWidth)
+            {
+                return;
+            }
+
+            textSize.FitToWidth(MaxWidth);
         }
-        
-        var textSize = new TextSize(__instance);
-        if (textSize.Width <= MaxWidth)
+        finally
         {
             _resizeInProgress = false;
-            return;
         }
-
-        
-        textSize.FitToWidth(MaxWidth);
-
-        _resizeInProgress = false;
     }
 }
 

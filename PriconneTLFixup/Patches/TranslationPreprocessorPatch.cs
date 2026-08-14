@@ -19,28 +19,54 @@ public static class TranslationPreprocessorPatch
     private const int COLOR_DISTANCE_THRESHOLD = 3;
     private const int GRADIENT_DISTANCE_THRESHOLD = 5;
 
-    public static void Prefix(AutoTranslationPlugin __instance, object ui, ref string text, string originalText)
+    public static void Prefix(ref string text, string originalText)
     {
-        if (originalText == null)
+        if (originalText == null || text == null)
         {
             return;
         }
 
-        var preTLColorMatches = PostTranslationColorCodeRegex.Matches(originalText);
-        var distinctPreTLColorMatches = preTLColorMatches.OfType<Match>().GroupBy(x => x.Value).Select(x =>x.First()).ToList();
-        var postTLColorMatches = PostTranslationColorCodeRegex.Matches(text);
-        
-        foreach (var preTLColorMatch in distinctPreTLColorMatches)
+        if (MayContainColorCode(originalText) && MayContainColorCode(text))
         {
-            Levenshtein Levenshtein = new(preTLColorMatch.Value);
+            RepairColorCodes(originalText, ref text);
+        }
+
+        if (text.Contains("[- ]", StringComparison.Ordinal))
+        {
+            text = text.Replace("[- ]", "[-]");
+        }
+
+        if (text.Contains("[--]", StringComparison.Ordinal)) text = text.Replace("[--]", "[-]");
+        if (text.Contains('⁇')) text = text.Replace("⁇", "");
+        if (text.Contains("unk>", StringComparison.Ordinal)) text = text.Replace("unk>", "");
+        text = text.Trim();
+    }
+
+    private static bool MayContainColorCode(string value)
+    {
+        return value.IndexOf('[') >= 0 || value.IndexOf('(') >= 0;
+    }
+
+    private static void RepairColorCodes(string originalText, ref string text)
+    {
+        var postTLColorMatches = PostTranslationColorCodeRegex.Matches(text);
+        var seenColorCodes = new HashSet<string>(StringComparer.Ordinal);
+        foreach (Match preTLColorMatch in PostTranslationColorCodeRegex.Matches(originalText))
+        {
+            if (!seenColorCodes.Add(preTLColorMatch.Value))
+            {
+                continue;
+            }
+
+            var levenshtein = new Levenshtein(preTLColorMatch.Value);
             foreach (Match postTLColorMatch in postTLColorMatches)
             {
                 if (postTLColorMatch.Value == preTLColorMatch.Value)
                 {
                     continue;
                 }
-                
-                if (Levenshtein.DistanceFrom(postTLColorMatch.Value) <= COLOR_DISTANCE_THRESHOLD )
+
+                if (levenshtein.DistanceFrom(postTLColorMatch.Value) <= COLOR_DISTANCE_THRESHOLD)
                 {
                     Log.Debug("Replacing color due to Levenshtein match: " + postTLColorMatch.Value + " -> " + preTLColorMatch.Value);
                     text = text.Replace(postTLColorMatch.Value, preTLColorMatch.Value);
@@ -48,38 +74,36 @@ public static class TranslationPreprocessorPatch
             }
         }
 
-        var colorGradientMatchesPre = ColorGradientRegex.Matches(originalText);
-        var colorGradientMatchsPost = ColorGradientRegex.Matches(text);
-        var distinctPreTLGradientMatches = colorGradientMatchesPre.OfType<Match>().GroupBy(x => x.Value).Select(x =>x.First()).ToList();
-        
-        foreach (var preTLGradientMatch in distinctPreTLGradientMatches)
+        var postTLGradientMatches = ColorGradientRegex.Matches(text);
+        var seenGradients = new HashSet<string>(StringComparer.Ordinal);
+        foreach (Match preTLGradientMatch in ColorGradientRegex.Matches(originalText))
         {
-            Levenshtein Levenshtein = new(preTLGradientMatch.Value);
-            foreach (Match postTLGradientMatch in colorGradientMatchsPost)
+            if (!seenGradients.Add(preTLGradientMatch.Value))
+            {
+                continue;
+            }
+
+            var levenshtein = new Levenshtein(preTLGradientMatch.Value);
+            foreach (Match postTLGradientMatch in postTLGradientMatches)
             {
                 if (postTLGradientMatch.Value == preTLGradientMatch.Value)
                 {
                     continue;
                 }
-                
-                if (Levenshtein.DistanceFrom(postTLGradientMatch.Value) <= GRADIENT_DISTANCE_THRESHOLD)
+
+                if (levenshtein.DistanceFrom(postTLGradientMatch.Value) <= GRADIENT_DISTANCE_THRESHOLD)
                 {
                     Log.Debug("Replacing gradient due to Levenshtein match: " + postTLGradientMatch.Value + " -> " + preTLGradientMatch.Value);
                     text = text.Replace(postTLGradientMatch.Value, preTLGradientMatch.Value);
                 }
-                
-                if (preTLGradientMatch.Value == postTLGradientMatch.Value.Replace(" ", ""))
+
+                var postWithoutSpaces = postTLGradientMatch.Value.Replace(" ", "");
+                if (preTLGradientMatch.Value == postWithoutSpaces)
                 {
-                    Log.Debug("Removing spaces from gradient match: " + postTLGradientMatch.Value + " -> " + postTLGradientMatch.Value.Replace(" ", ""));
-                    text = text.Replace(postTLGradientMatch.Value, postTLGradientMatch.Value.Replace(" ", ""));
+                    Log.Debug("Removing spaces from gradient match: " + postTLGradientMatch.Value + " -> " + postWithoutSpaces);
+                    text = text.Replace(postTLGradientMatch.Value, postWithoutSpaces);
                 }
             }
         }
-
-        text = text.Replace("[- ]", "[-]");
-        text = text.Replace("[--]", "[-]");
-        text = text.Replace("⁇", "");
-        text = text.Replace("unk>", "");
-        text = text.Trim();
     }
 }

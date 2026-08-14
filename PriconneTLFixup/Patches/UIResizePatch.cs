@@ -1,5 +1,4 @@
 ﻿using System.Collections;
-using System.Text.RegularExpressions;
 using BepInEx.Unity.IL2CPP.Utils.Collections;
 using Elements;
 using HarmonyLib;
@@ -70,12 +69,12 @@ public class TitleTextPatch
         __instance.titleLabel.SetActive(true);
         __instance.titleLabel2nd.SetActive(true);
         __instance.gameObject.SetActive(activeSelf);
-        var matchCollection = Regex.Matches(__instance.titleLabel2nd.text, "[a-zA-Z0-9]");
-        var num = __instance.titleLabel2nd.text.Length - matchCollection.Count;
+        var asciiCharacterCount = CountAsciiAlphaNumeric(__instance.titleLabel2nd.text);
+        var num = __instance.titleLabel2nd.text.Length - asciiCharacterCount;
         var fontSize = __instance.titleLabel2nd.fontSize;
         var num2 = Mathf.CeilToInt(fontSize * 0.75f);
         var num3 = __instance.titleLabel.text.Length * __instance.titleLabel.fontSize + num * fontSize +
-                   matchCollection.Count * num2;
+                    asciiCharacterCount * num2;
         __instance.underLine.width = __instance.leftOffset + num3 + __instance.rightOffset;
         __instance.underLine.gameObject.SetActive(true);
         __instance.subTitleLabel.SetActiveWithCheck(false);
@@ -138,6 +137,20 @@ public class TitleTextPatch
         {
             Log.Debug("TitleTextCoroutine: Japanese text");
         }
+    }
+
+    private static int CountAsciiAlphaNumeric(string value)
+    {
+        var count = 0;
+        foreach (var c in value)
+        {
+            if (c is (>= 'a' and <= 'z') or (>= 'A' and <= 'Z') or (>= '0' and <= '9'))
+            {
+                count++;
+            }
+        }
+
+        return count;
     }
 }
 
@@ -340,31 +353,83 @@ public class UnclampPatch
 {
     public static void Postfix(UILabel __instance)
     {
-        var filteredProcessedText = Regex.Replace(__instance.mProcessedText ?? "", @"[\n ]*", "");
-        var filteredText = Regex.Replace(__instance.mText ?? "", @"[\n ]*", "");
-        if (
-            __instance.isValid &&
-            __instance.mChanged &&
-            !string.IsNullOrEmpty(filteredProcessedText) &&
-            __instance.overflowMethod == UILabel.Overflow.ClampContent &&
-            filteredText != filteredProcessedText &&
-            __instance.maxLineCount <= 3 &&
-            __instance.name != "DetailLabel" &&
-            __instance.name != "Label_item_name" &&
-            __instance.height < 50 &&
-            __instance.lineWidth < 300 &&
-            !Regex.Matches(__instance.text, @"[\n]").Any()
-        )
+        if (!__instance.isValid ||
+            !__instance.mChanged ||
+            __instance.overflowMethod != UILabel.Overflow.ClampContent ||
+            __instance.maxLineCount > 3 ||
+            __instance.height >= 50 ||
+            __instance.lineWidth >= 300)
         {
-            if (__instance.alignment == NGUIText.Alignment.Left)
+            return;
+        }
+
+        var name = __instance.name;
+        if (name is "DetailLabel" or "Label_item_name")
+        {
+            return;
+        }
+
+        var processedText = __instance.mProcessedText;
+        var originalText = __instance.mText;
+        var displayedText = __instance.text;
+        if (!HasNonLayoutCharacter(processedText) ||
+            EqualsIgnoringSpacesAndNewlines(originalText, processedText) ||
+            displayedText == null ||
+            displayedText.IndexOf('\n') >= 0)
+        {
+            return;
+        }
+
+        if (__instance.alignment == NGUIText.Alignment.Left)
+        {
+            __instance.pivot = UIWidget.Pivot.Left;
+        }
+
+        Log.Debug($"UnclampPatch: {name} - {originalText} != {processedText}");
+        Log.Debug($"{__instance.maxLineCount} - {__instance.overflowMethod}");
+        __instance.overflowMethod = UILabel.Overflow.ResizeFreely;
+        __instance.ProcessText();
+    }
+
+    private static bool HasNonLayoutCharacter(string? value)
+    {
+        if (value == null)
+        {
+            return false;
+        }
+
+        foreach (var c in value)
+        {
+            if (c is not (' ' or '\n'))
             {
-                __instance.pivot = UIWidget.Pivot.Left;
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static bool EqualsIgnoringSpacesAndNewlines(string? left, string? right)
+    {
+        left ??= string.Empty;
+        right ??= string.Empty;
+
+        var leftIndex = 0;
+        var rightIndex = 0;
+        while (true)
+        {
+            while (leftIndex < left.Length && left[leftIndex] is ' ' or '\n') leftIndex++;
+            while (rightIndex < right.Length && right[rightIndex] is ' ' or '\n') rightIndex++;
+
+            if (leftIndex == left.Length || rightIndex == right.Length)
+            {
+                return leftIndex == left.Length && rightIndex == right.Length;
             }
 
-            Log.Debug($"UnclampPatch: {__instance.name} - {__instance.mText} != {__instance.mProcessedText}");
-            Log.Debug($"{__instance.maxLineCount} - {__instance.overflowMethod}");
-            __instance.overflowMethod = UILabel.Overflow.ResizeFreely;
-            __instance.ProcessText();
+            if (left[leftIndex++] != right[rightIndex++])
+            {
+                return false;
+            }
         }
     }
 }

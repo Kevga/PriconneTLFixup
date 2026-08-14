@@ -7,6 +7,7 @@ namespace PriconneTLFixup;
 public static class Util
 {
     public static readonly Regex ColorCodeRemovalRegex = new(@"\[[^\]]+\]/g", RegexOptions.Compiled);
+    private static readonly Regex JapaneseCharacterRegex = new(@"\p{IsHiragana}|\p{IsKatakana}|\p{IsCJKUnifiedIdeographs}", RegexOptions.Compiled);
     public static float? GetTranslationDelayInSeconds()
     {
         return Plugin.AutoTranslatorPlugin?.TranslationManager?.CurrentEndpoint?.TranslationDelay;
@@ -43,7 +44,7 @@ public static class Util
     
     public static bool IsJapanese(this string _value)
     {
-        return Regex.IsMatch(_value, @"\p{IsHiragana}|\p{IsKatakana}|\p{IsCJKUnifiedIdeographs}");
+        return JapaneseCharacterRegex.IsMatch(_value);
     }
 
     public static string GetRankSuffix(int rank)

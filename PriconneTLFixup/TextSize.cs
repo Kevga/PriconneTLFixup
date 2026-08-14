@@ -1,11 +1,11 @@
-﻿using System.Collections;
+﻿using System.Text;
 using UnityEngine;
 
 namespace PriconneTLFixup;
 
 public class TextSize
 {
-    private readonly Hashtable _dict; //map character -> width
+    private readonly Dictionary<char, float> _characterWidths;
 
     private readonly TextMesh _textMesh;
     private readonly Renderer _renderer;
@@ -14,7 +14,7 @@ public class TextSize
     {
         _textMesh = tm;
         _renderer = tm.GetComponent<Renderer>();
-        _dict = new Hashtable();
+        _characterWidths = new Dictionary<char, float>();
         GetSpace();
     }
 
@@ -30,32 +30,28 @@ public class TextSize
         // ReSharper disable once Unity.InefficientPropertyAccess
         var cw = _renderer.bounds.size.x - 2 * aw;
 
-        _dict.Add(' ', cw);
-        _dict.Add('a', aw);
+        _characterWidths.Add(' ', cw);
+        _characterWidths.Add('a', aw);
 
         _textMesh.text = oldText;
     }
 
     public float GetTextWidth(string s)
     {
-        var charList = s.ToCharArray();
         float w = 0;
-        char c;
         var oldText = _textMesh.text;
 
-        for (var i = 0; i < charList.Length; i++)
+        foreach (var c in s)
         {
-            c = charList[i];
-
-            if (_dict.ContainsKey(c))
+            if (_characterWidths.TryGetValue(c, out var cachedWidth))
             {
-                w += (float)_dict[c]!;
+                w += cachedWidth;
             }
             else
             {
                 _textMesh.text = "" + c;
                 var cw = _renderer.bounds.size.x;
-                _dict.Add(c, cw);
+                _characterWidths.Add(c, cw);
                 w += cw;
             }
         }
@@ -72,11 +68,14 @@ public class TextSize
         _textMesh.text = "";
         
         var lines = oldText.Split('\n');
+        var wrappedText = new StringBuilder(oldText.Length + lines.Length);
 
         foreach (var line in lines)
         {
-            _textMesh.text += WrapLine(line, wantedWidth) + "\n";
+            wrappedText.Append(WrapLine(line, wantedWidth)).Append('\n');
         }
+
+        _textMesh.text = wrappedText.ToString();
     }
 
     private string WrapLine(string s, float w)
@@ -84,61 +83,59 @@ public class TextSize
         // need to check if smaller than maximum character length, really...
         if (w == 0 || s.Length <= 0) return s;
 
-        var charList = s.ToCharArray();
-
         float wordWidth = 0;
         float currentWidth = 0;
 
-        var word = "";
-        var newText = "";
+        var word = new StringBuilder();
+        var newText = new StringBuilder(s.Length + 4);
         var oldText = _textMesh.text;
 
-        for (var i = 0; i < charList.Length; i++)
+        for (var i = 0; i < s.Length; i++)
         {
-            var c = charList[i];
+            var c = s[i];
 
             float charWidth;
-            if (_dict.ContainsKey(c))
+            if (_characterWidths.TryGetValue(c, out var cachedWidth))
             {
-                charWidth = (float)_dict[c]!;
+                charWidth = cachedWidth;
             }
             else
             {
                 _textMesh.text = "" + c;
                 charWidth = _renderer.bounds.size.x;
-                _dict.Add(c, charWidth);
+                _characterWidths.Add(c, charWidth);
                 //here check if max char length
             }
 
-            if (c == ' ' || i == charList.Length - 1)
+            if (c == ' ' || i == s.Length - 1)
             {
                 if (c != ' ')
                 {
-                    word += c.ToString();
+                    word.Append(c);
                     wordWidth += charWidth;
                 }
 
                 if (currentWidth + wordWidth < w)
                 {
                     currentWidth += wordWidth;
-                    newText += word;
+                    newText.Append(word);
                 }
                 else
                 {
                     currentWidth = wordWidth;
-                    newText += word.Replace(" ", "\n");
+                    newText.Append(word.Replace(' ', '\n'));
                 }
 
-                word = "";
+                word.Clear();
                 wordWidth = 0;
             }
 
-            word += c.ToString();
+            word.Append(c);
             wordWidth += charWidth;
         }
 
         _textMesh.text = oldText;
-        return newText;
+        return newText.ToString();
     }
 
     public float Width => GetTextWidth(_textMesh.text);

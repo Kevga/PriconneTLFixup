@@ -1,11 +1,11 @@
-﻿using System.Collections;
-using System.Globalization;
+﻿using System.Globalization;
 using System.Text.RegularExpressions;
-using BepInEx.Unity.IL2CPP.Utils.Collections;
 using Elements;
 using HarmonyLib;
+using Il2CppInterop.Runtime;
 using Il2CppInterop.Runtime.InteropTypes.Arrays;
 using Il2CppSystem;
+using UnityEngine;
 using XUnity.AutoTranslator.Plugin.Core;
 
 namespace PriconneTLFixup.Patches;
@@ -17,12 +17,12 @@ namespace PriconneTLFixup.Patches;
 [HarmonyWrapSafe]
 public class ThousandsSeperatorSoloNumberPatch
 {
-    private static Regex _hpRegex = new(@"^(\d+)/(\d{4,})$", RegexOptions.Compiled);
+    private static readonly Regex HpRegex = new(@"^(\d+)/(\d{4,})$", RegexOptions.Compiled);
 
-    private static Regex _gradientTextRegex =
+    private static readonly Regex GradientTextRegex =
         new(@"^(\[[0-9a-fA-F,-]+\])[x+×]?(\d{4,})(\[[0-9a-fA-F,-]+\])$", RegexOptions.Compiled);
 
-    private static CultureInfo _culture = new("en-US");
+    private static readonly CultureInfo Culture = new("en-US");
     
     public static void Prefix(UILabel __instance, ref string value)
     {
@@ -39,7 +39,9 @@ public class ThousandsSeperatorSoloNumberPatch
         try
         {
             var name = __instance.name;
-            if (name != null && (name.ToLower().Contains("input") || name.ToLower().Contains("condition")))
+            if (name != null &&
+                (name.IndexOf("input", System.StringComparison.OrdinalIgnoreCase) >= 0 ||
+                 name.IndexOf("condition", System.StringComparison.OrdinalIgnoreCase) >= 0))
             {
                 return;
             }
@@ -49,46 +51,51 @@ public class ThousandsSeperatorSoloNumberPatch
             // ignored
         }
 
-        var match = _hpRegex.Match(value);
-        if (match.Success)
+        if (long.TryParse(value, out var intVal))
         {
-            foreach (Group group in match.Groups)
+            if (__instance.overflowMethod == UILabel.Overflow.ClampContent)
             {
-                if (!long.TryParse(group.Value, out var hp))
-                {
-                    continue;
-                }
-
-                value = value.Replace(group.Value, hp.ToString("#,0", _culture));
+                __instance.overflowMethod = UILabel.Overflow.ShrinkContent;
+                Log.Debug($"Changed overflow method to shrink content for {__instance.name}");
             }
 
+            value = intVal.ToString("#,0", Culture);
             return;
         }
 
-        var gradientMatch = _gradientTextRegex.Match(value);
+        // Most label text is neither a plain number nor either of these special formats.
+        // Avoid entering the regex engine unless the delimiters make a match possible.
+        if (value.IndexOf('/') >= 0)
+        {
+            var match = HpRegex.Match(value);
+            if (match.Success)
+            {
+                var numerator = long.TryParse(match.Groups[1].Value, out var numeratorValue)
+                    ? numeratorValue.ToString("#,0", Culture)
+                    : match.Groups[1].Value;
+                var denominator = long.TryParse(match.Groups[2].Value, out var denominatorValue)
+                    ? denominatorValue.ToString("#,0", Culture)
+                    : match.Groups[2].Value;
+                value = numerator + "/" + denominator;
+
+                return;
+            }
+        }
+
+        if (value.Length == 0 || value[0] != '[')
+        {
+            return;
+        }
+
+        var gradientMatch = GradientTextRegex.Match(value);
         if (gradientMatch.Success)
         {
             var group = gradientMatch.Groups[2];
             if (long.TryParse(group.Value, out var hp))
             {
-                value = value.Replace(group.Value, hp.ToString("#,0", _culture));
+                value = value[..group.Index] + hp.ToString("#,0", Culture) + value[(group.Index + group.Length)..];
             }
-            return;
         }
-        
-        if (!long.TryParse(value, out var intVal))
-        {
-            return;
-        }
-
-        if (__instance.overflowMethod == UILabel.Overflow.ClampContent)
-        {
-            __instance.overflowMethod = UILabel.Overflow.ShrinkContent;
-            Log.Debug($"Changed overflow method to shrink content for {__instance.name}");
-        }
-
-        var formattedNumber = intVal.ToString("#,0", _culture);
-        value = formattedNumber;
     }
 }
 
@@ -112,7 +119,7 @@ public class ThousandsSeperatorPostTranslationPatch
             return;
         }
 
-        if (text.Contains("Player ID"))
+        if (text.Contains("Player ID", System.StringComparison.Ordinal) || !ContainsPotentialLargeNumber(text))
         {
             return;
         }
@@ -122,22 +129,47 @@ public class ThousandsSeperatorPostTranslationPatch
             return;
         }
 
-        var matches = NumberRegex.Matches(text);
-        foreach (Match match in matches)
+        text = NumberRegex.Replace(text, static match =>
         {
             if (!long.TryParse(match.Value, out var intVal))
             {
-                continue;
+                return match.Value;
             }
 
-            if (!ThousandsSeperatorDictionary32Patch.ConvertedNumberDictionary.TryGetValue(intVal, out _))
+            if (!ThousandsSeperatorDictionary32Patch.WasConvertedThisFrame(intVal))
             {
-                //Log.Debug($"Could not find {intVal} in dictionary (AutoTranslationPlugin.SetText)");
-                continue;
+                return match.Value;
             }
 
-            text = text.Replace(match.Value, intVal.ToString("#,0", Culture));
+            return intVal.ToString("#,0", Culture);
+        });
+    }
+
+    private static bool ContainsPotentialLargeNumber(string text)
+    {
+        var consecutiveDigits = 0;
+        for (var i = 0; i < text.Length; i++)
+        {
+            var c = text[i];
+            if (c is >= '0' and <= '9')
+            {
+                if (consecutiveDigits == 0 && c == '0')
+                {
+                    continue;
+                }
+
+                if (++consecutiveDigits >= 4)
+                {
+                    return true;
+                }
+            }
+            else
+            {
+                consecutiveDigits = 0;
+            }
         }
+
+        return false;
     }
 }
 
@@ -145,8 +177,8 @@ public class ThousandsSeperatorPostTranslationPatch
 [HarmonyWrapSafe]
 public class ThousandsSeperatorDictionary32Patch
 {
-    internal static bool Initialized;
-    internal static readonly Dictionary<long, string> ConvertedNumberDictionary = new();
+    private static readonly HashSet<long> ConvertedNumbers = new();
+    private static int _convertedNumberFrame = -1;
     
     public static void Postfix(ref string __result, int value, Il2CppSystem.ReadOnlySpan<char> format)
     {
@@ -160,28 +192,24 @@ public class ThousandsSeperatorDictionary32Patch
             return;
         }
 
-        ConvertedNumberDictionary[value] = __result;
-
-        if (Initialized)
-        {
-            return;
-        }
-
-        CoroutineStarter.Instance.StartCoroutine(ClearConvertedNumberDictionary().WrapToIl2Cpp());
-        Initialized = true;
+        RecordConvertedNumber(value);
     }
 
-    private static IEnumerator ClearConvertedNumberDictionary()
+    internal static bool WasConvertedThisFrame(long value)
     {
-        //This is intended to run the entire duration of the game
-        //We want to clear the dictionaries every frame to only keep values that were converted in the current frame
-        while (true)
+        return _convertedNumberFrame == Time.frameCount && ConvertedNumbers.Contains(value);
+    }
+
+    internal static void RecordConvertedNumber(long value)
+    {
+        var currentFrame = Time.frameCount;
+        if (_convertedNumberFrame != currentFrame)
         {
-            ConvertedNumberDictionary.Clear();
-            ThousandsSeperatorDictionaryCustomUILabelPatch.NumberDictionary.Clear();
-            yield return null;
+            ConvertedNumbers.Clear();
+            _convertedNumberFrame = currentFrame;
         }
-        // ReSharper disable once IteratorNeverReturns
+
+        ConvertedNumbers.Add(value);
     }
 }
 
@@ -201,7 +229,7 @@ public class ThousandsSeperatorDictionary64Patch
             return;
         }
 
-        ThousandsSeperatorDictionary32Patch.ConvertedNumberDictionary[value] = __result;
+        ThousandsSeperatorDictionary32Patch.RecordConvertedNumber(value);
     }
 }
 
@@ -209,9 +237,21 @@ public class ThousandsSeperatorDictionary64Patch
 [HarmonyWrapSafe]
 public class ThousandsSeperatorDictionaryCustomUILabelPatch
 {
-    internal static readonly Dictionary<CustomUILabel, long> NumberDictionary = new();
-    public static void Prefix(CustomUILabel __instance, Il2CppReferenceArray<Il2CppSystem.Object> _args)
+    public readonly struct NumberArgumentState
     {
+        public NumberArgumentState(long value)
+        {
+            HasValue = true;
+            Value = value;
+        }
+
+        public bool HasValue { get; }
+        public long Value { get; }
+    }
+
+    public static void Prefix(Il2CppReferenceArray<Il2CppSystem.Object> _args, out NumberArgumentState __state)
+    {
+        __state = default;
         if (!Settings.EnableLargeNumberSeparators.Value || !Util.IsTranslationEnabled())
         {
             return;
@@ -229,56 +269,49 @@ public class ThousandsSeperatorDictionaryCustomUILabelPatch
             {
                 continue;
             }
-            var cpptype = arg.GetIl2CppType();
-            if (cpptype == null)
+            var objectClass = arg.ObjectClass;
+            if (objectClass == Il2CppClassPointerStore<int>.NativeClassPtr)
             {
-                continue;
-            }
-            
-            var actualType = System.Type.GetType(cpptype.AssemblyQualifiedName);
-            if (actualType == null) 
-            {
-                continue;
-            }
-            
-            if (actualType == typeof(int))
-            {
-                var value = arg.Unbox<int>();
-                NumberDictionary.TryAdd(__instance, value);
+                __state = new NumberArgumentState(arg.Unbox<int>());
+                return;
             } 
-            else if (actualType == typeof(long))
+
+            if (objectClass == Il2CppClassPointerStore<long>.NativeClassPtr)
             {
-                var value = arg.Unbox<long>();
-                NumberDictionary.TryAdd(__instance, value);
+                __state = new NumberArgumentState(arg.Unbox<long>());
+                return;
             }
         }
     }
 
-    public static void Postfix(CustomUILabel __instance, Il2CppReferenceArray<Il2CppSystem.Object> _args)
+    public static void Postfix(CustomUILabel __instance, NumberArgumentState __state)
     {
         if (!Settings.EnableLargeNumberSeparators.Value || !Util.IsTranslationEnabled())
         {
             return;
         }
-        
-        var exists = NumberDictionary.TryGetValue(__instance, out var value);
-        if (!exists)
+
+        if (!__state.HasValue)
         {
             return;
         }
-        
-        if (ThousandsSeperatorPostTranslationPatch.DateRegex.IsMatch(__instance.text))
+
+        var labelText = __instance.text;
+        if (labelText == null || ThousandsSeperatorPostTranslationPatch.DateRegex.IsMatch(labelText))
         {
             Log.Debug($"Skipping {__instance.name} because it contains a date");
             return;
         }
-        
+
+        var value = __state.Value;
+        var valueString = value.ToString();
         var formattedNumberString = value.ToString("#,0", ThousandsSeperatorPostTranslationPatch.Culture);
-        if (formattedNumberString == value.ToString())
+        if (formattedNumberString == valueString)
         {
             return;
         }
-        __instance.text = __instance.text.Replace(value.ToString(), formattedNumberString);
+
+        __instance.text = labelText.Replace(valueString, formattedNumberString);
         Log.Debug($"Replaced {value} with {formattedNumberString} in {__instance.name} (CustomUILabel.SetText)");
     }
 }
